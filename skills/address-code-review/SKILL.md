@@ -68,7 +68,7 @@ Show one comment's diff per message. The user asked for incremental, which means
 
 ## 5. Commit on approval
 
-Verify before committing, in the packages you touched. For example,:
+Verify before committing, in the packages you touched. For example:
 
 ```bash
 pnpm typecheck && pnpm lint && pnpm test <affected-spec>
