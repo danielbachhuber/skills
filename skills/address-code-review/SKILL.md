@@ -124,7 +124,7 @@ If `bb dynamic-ui help` succeeds, also publish the prose replies above the compo
 
 In chat, say how many replies are above the composer and link the draft file. Do not repeat the replies in chat.
 
-Pressing a button is the user's yes for that reply. When its message arrives, post the reply exactly as it appears in the message, since the user may have edited it, to `/comments/<comment-id>/replies`, remove it from the draft file (delete the file once it is empty), and republish with the same key. Post only the reply the message names.
+Pressing a button is the user's yes for that reply. When its message arrives, post the reply exactly as it appears in the message, since the user may have edited it, to `/comments/<comment-id>/replies`, remove it from the draft file (delete the file once it is empty), and republish with the same key, keeping the posted item in the view so it shows as done. Post only the reply the message names.
 
 ## Order matters
 
