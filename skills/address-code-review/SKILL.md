@@ -115,12 +115,12 @@ Prose replies (questions, pushback, out-of-scope) are different: write them to `
 If `bb dynamic-ui help` succeeds, also publish the prose replies above the composer, so the user can read each one next to the comment it answers, edit it, and post it with one click. The `dynamic-ui` skill has the file format. Publish once every reply is drafted, with `bb dynamic-ui publish --file /tmp/pr-<n>-replies/view.json --key review-replies`, one item per comment:
 
 - view `title`: `Review replies: #<n>`
-- item `id`: `comment-<comment-id>`; `title`: `<reviewer> on <path>:<line>`, or `<reviewer>'s review` for a note in a review body
+- item `id`: `comment-<comment-id>`; `title`: `<reviewer> on <path>:<line>`, or `<reviewer>'s review` for a note in a review body; `url`: the comment's `html_url` (the review's, for a review body), which makes the title a direct link to it
 - `badges`: what the reply does (`Pushback`, `Answer`, `Thanks`, `Out of scope`)
 - `summary`: first line is your conclusion in a few words, since it is all the row above the composer shows. Then the reviewer's comment quoted verbatim.
 - `details`: the evidence behind the reply, with file and line references
 - `draft`: the reply exactly as in the draft file, with `draftLabel` set to `Reply to post`
-- `actions`: a primary `message` button, `Post reply`, with `text` `Post this reply to review comment <comment-id> on #<n>:` followed by `{draft}` on the lines below, then a `link` to the comment's `html_url`. A note in a review body has no thread to reply in, so its button says `Post as a PR comment` and its text says so.
+- `actions`: a primary `message` button, `Post reply`, with `text` `Post this reply to review comment <comment-id> on #<n>:` followed by `{draft}` on the lines below. The title already links to the comment, so no separate link button. A note in a review body has no thread to reply in, so its button says `Post as a PR comment` and its text says so.
 
 In chat, say how many replies are above the composer and link the draft file. Do not repeat the replies in chat.
 

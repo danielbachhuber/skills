@@ -149,12 +149,12 @@ If `bb dynamic-ui help` succeeds, show the batch above the composer instead of g
 
 1. Do steps 1 to 6 for every issue first. Post, close, label, and move nothing yet.
 2. Publish one view with `bb dynamic-ui publish --file <path> --key triage`, one item per issue, sectioned by recommended outcome (close, keep open, move, rewrite):
-   - `title`: `#<n> <issue title>`
+   - `title`: `#<n> <issue title>`, with `url` set to the issue, so the title links to it
    - `badges`: the recommended outcome, then the issue's labels
    - `summary`: first line is the recommendation and why, since it is all the row above the composer shows. Then one line per ask with its status and evidence.
    - `details`: suggested label, assignee, or milestone changes, if any
    - `draft`: the full drafted comment, with `draftLabel` set to `Comment to post`. The opened item shows it once, in a box the user can edit, so do not repeat it in `summary` or `details`.
-   - `actions`: a primary `message` button labelled for the recommended outcome ("Post and close"), then one for the likeliest alternative ("Post and keep open"), then a `link` to the issue. Each `message` button's `text` is its instruction followed by `{draft}`, for example `Post this comment on #<n>, then close it as completed:` and `{draft}` below it. Both buttons share the one draft, and whichever is pressed sends the comment as the user left it.
+   - `actions`: a primary `message` button labelled for the recommended outcome ("Post and close"), then one for the likeliest alternative ("Post and keep open"). Each `message` button's `text` is its instruction followed by `{draft}`, for example `Post this comment on #<n>, then close it as completed:` and `{draft}` below it. Both buttons share the one draft, and whichever is pressed sends the comment as the user left it.
 3. In chat, give the counts by outcome and point to the list above the composer.
 
 Pressing a button is the user's yes for that issue. When its message arrives, post the comment exactly as it appears in the message, since the user may have edited it: write it to `~/projects/drafts/reply-<n>-triage.md`, run the step 8 commands for the outcome the message names, delete the draft, and republish with the same key. Act only on the issue the message names.

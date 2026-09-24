@@ -51,7 +51,7 @@ If `bb dynamic-ui help` succeeds, show the assessment above the composer as well
 After step 4, publish one item per PR with `bb dynamic-ui publish --file /tmp/dep-<n>/view.json --key dependabot`:
 
 - view `title`: `Dependabot #<n>: <package>`
-- item `id`: `pr-<n>`; `title`: `#<n> <package> <from> → <to>`
+- item `id`: `pr-<n>`; `title`: `#<n> <package> <from> → <to>`; `url`: the PR, so the title links to it
 - `badges`: the verdict first (`Safe to merge` success, `Needs a look` warning, `Hold` danger), then the scope (`dev-only` or `runtime`) and the semver jump (`patch`, `minor`, `major`), read from the version numbers themselves (0.16.0 → 0.17.0 is `minor`)
 - `summary`: first line is the verdict and why, since it is all the row above the composer shows. Then one line each for what changed, blast radius, and CI.
 - `details`: anything worth checking before merging, such as a stale-base artifact in the diff or a skipped job
@@ -60,7 +60,6 @@ After step 4, publish one item per PR with `bb dynamic-ui publish --file /tmp/de
   - a primary `message` button, `Post, approve, and merge`, with `text` `Post this assessment on #<n>, approve the PR, and turn on auto-merge (squash):` followed by `{draft}` on the lines below. Mark a different button primary when the verdict is not "safe to merge".
   - a `message` button, `Post only`, with `text` `Post this assessment on #<n> and stop there:` followed by `{draft}`
   - when the PR conflicts or has a stale base, a `command` button, `Ask Dependabot to rebase`, running `gh pr comment <n> --repo <owner>/<repo> --body "@dependabot rebase"`
-  - a `link` to the PR, labelled `Open #<n>`
 
 In chat, give the verdict in one sentence and point to the view above the composer, along with the draft file's link.
 
