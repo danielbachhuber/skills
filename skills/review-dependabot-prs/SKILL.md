@@ -52,7 +52,7 @@ After step 4, publish one item per PR with `bb dynamic-ui publish --file /tmp/de
 
 - view `title`: `Dependabot #<n>: <package>`
 - item `id`: `pr-<n>`; `title`: `#<n> <package> <from> → <to>`
-- `badges`: the verdict first (`Safe to merge` success, `Needs a look` warning, `Hold` danger), then the scope (`dev-only` or `runtime`) and the semver jump (`patch`, `minor`, `major`)
+- `badges`: the verdict first (`Safe to merge` success, `Needs a look` warning, `Hold` danger), then the scope (`dev-only` or `runtime`) and the semver jump (`patch`, `minor`, `major`), read from the version numbers themselves (0.16.0 → 0.17.0 is `minor`)
 - `summary`: first line is the verdict and why, since it is all the row above the composer shows. Then one line each for what changed, blast radius, and CI.
 - `details`: anything worth checking before merging, such as a stale-base artifact in the diff or a skipped job
 - `draft`: the assessment exactly as in the draft file, with `draftLabel` set to `Assessment to post`. Do not repeat it in `summary` or `details`.
