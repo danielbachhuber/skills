@@ -134,11 +134,28 @@ Anything visual, a screenshot or a screencast, goes in a two-column table with `
 Not a stack of labelled paragraphs. The reviewer's whole question is what changed, and
 side by side is the only layout that answers it at a glance.
 
+Save the media in a folder beside the draft, named after it:
+`~/projects/drafts/pull-request-<slug>-media/`. Not `/tmp`, where it can be cleaned up
+before the PR is posted, and not the repo. In the draft, reference each file by its
+absolute path. The draft is previewed in bb, which renders only absolute paths: a `./`
+reference resolves against the preview's working directory, not the draft's folder, and
+shows as a broken image.
+
 ```markdown
 | Before | After |
 |:------:|:-----:|
-| ![before](./before.png) | ![after](./after.png) |
+| ![before](/Users/<you>/projects/drafts/pull-request-<slug>-media/before.png) | ![after](/Users/<you>/projects/drafts/pull-request-<slug>-media/after.png) |
 | Keystrokes land in the field mid-post. | The field is locked until the post completes. |
+```
+
+To stack several images in one cell, such as a set of variants being removed, separate
+them with `<br>` inside the cell.
+
+Before showing the draft, confirm every media reference points at a file that exists:
+
+```bash
+grep -oE '\]\((/[^)]+\.(png|jpg|gif|mp4))\)|src="(/[^"]+)"' ~/projects/drafts/pull-request-<slug>.md
+ls ~/projects/drafts/pull-request-<slug>-media/
 ```
 
 `gh pr create` and `gh pr edit` upload the files themselves via `--attach` (gh 2.99+), so
@@ -147,17 +164,20 @@ nothing needs to be committed to the repo or hosted anywhere:
 ```bash
 gh pr create --repo <owner>/<repo> --title "<title>" \
   --body-file ~/projects/drafts/pull-request-<slug>.md \
-  --attach ./before.png --attach ./after.png
+  --attach ~/projects/drafts/pull-request-<slug>-media/before.png \
+  --attach ~/projects/drafts/pull-request-<slug>-media/after.png
 ```
 
 Three properties of that upload decide whether the table renders:
 
 - **Reference rewriting is path-literal.** `--attach ./before.png` substitutes a body
-  reference written exactly `./before.png`. Attach an absolute path against a `./before.png`
-  reference and nothing is substituted: gh appends the asset to the end of the body instead.
-  Either `cd` to the media directory and attach relative paths, or plan on the splice below.
-  gh resolves the branch from the working directory, so that `cd` has to stay inside the
-  repo.
+  reference written exactly `./before.png`. A reference that doesn't match the attached path
+  character for character is not substituted: gh appends the asset to the end of the body
+  instead. Whether an absolute reference is substituted when you attach the same absolute
+  path is unverified, so read the body back after every create or edit, splice any
+  appended `https://github.com/user-attachments/assets/<id>` URLs into the table, and
+  remove the leftover local paths. Run gh from inside the repo, because it resolves the
+  branch from the working directory.
 - **A video is appended, never substituted.** For a screencast the flow is always: attach,
   read the appended `https://github.com/user-attachments/assets/<id>` URLs back out of the
   body, splice them into the table, then `gh pr edit --body-file` again.
@@ -179,7 +199,7 @@ hash:
 T=$(gh auth token)
 curl -sL -H "Authorization: Bearer $T" -o /tmp/check.mp4 \
   "https://github.com/user-attachments/assets/<id>"
-md5 /tmp/check.mp4 ./before.mp4
+md5 /tmp/check.mp4 ~/projects/drafts/pull-request-<slug>-media/before.mp4
 ```
 
 Then check what GitHub rendered, not what you wrote:
@@ -253,7 +273,8 @@ gh pr create --repo <owner>/<repo> --title "<title>" --body-file ~/projects/draf
 Add `--attach` for any media (step 7), and re-read the body afterwards: an appended asset
 means the reference was not substituted and still needs splicing.
 
-Delete the draft from `~/projects/drafts/` once the GitHub operation succeeds.
+Delete the draft from `~/projects/drafts/`, and its `-media/` folder if it has one, once the
+GitHub operation succeeds and the rendered body shows every image and player.
 
 ## Revising one section
 

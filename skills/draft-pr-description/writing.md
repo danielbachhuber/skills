@@ -64,12 +64,15 @@ something unless it does. If the work is partial, say what is left.
 
 When there are before/after screenshots or screencasts, lay them out as a two-column
 markdown table with `Before` and `After` as the headers, one media reference per column, and
-a one-line caption row beneath. Never a stack of labelled paragraphs. Use local file
-references, each in its own cell: images as `![alt](./name.png)`, videos as
-`<video src="./name.mp4" controls></video>`. Those get replaced with uploaded asset URLs
-when the PR is created or edited. Put the table in Proposed Changes, or whichever section
-describes the change, shown by default rather than inside a `<details>` expander or a
-trailing section of its own.
+a one-line caption row beneath. Never a stack of labelled paragraphs. Save the files in
+`~/projects/drafts/pull-request-<slug>-media/` and reference each one by its absolute path,
+so the draft's preview in bb renders it: images as
+`![alt](/Users/<you>/projects/drafts/pull-request-<slug>-media/name.png)`, videos as
+`<video src="/Users/<you>/projects/drafts/pull-request-<slug>-media/name.mp4" controls></video>`.
+A `./name.png` reference shows as a broken image in the preview. The local paths get
+replaced with uploaded asset URLs when the PR is created or edited. Put the table in
+Proposed Changes, or whichever section describes the change, shown by default rather than
+inside a `<details>` expander or a trailing section of its own.
 
 Name changed files by their repo-relative path in backticks. Diff links wait until the pull
 request number exists.
