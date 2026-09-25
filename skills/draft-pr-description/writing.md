@@ -31,7 +31,14 @@ in the body saying what breaks and what a caller has to change.
 
 ## The body
 
-When the PR closes an issue, the first line of the body is `Fixes <issue URL>`.
+When the PR works on an issue, the first line of the body links it, and the verb says
+whether merging the PR finishes the issue:
+
+- `Fixes <issue URL>` when the PR fully resolves the issue, or is the last PR for it.
+  GitHub closes the issue on merge.
+- `See <issue URL>` when work on the issue remains after this PR: an umbrella issue the PR
+  only advances, or a follow-up the description itself defers, such as an out-of-scope
+  item under Decisions.
 
 Front-load. A reviewer should be able to stop reading as soon as they have what they need:
 the goal, then the approach, then the detail. Put the detail a reviewer opens on demand

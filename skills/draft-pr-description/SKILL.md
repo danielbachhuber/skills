@@ -106,6 +106,8 @@ Read the draft back and check it against the code, not against your memory of th
 - **Dropped caveats.** A number that appears without the qualifier it needs.
 - **Overclaiming.** "Fixes", "removes", "resolves" where the evidence only supports
   "reduces".
+- **The wrong issue verb.** A `Fixes` opener while the body names work on the issue that
+  remains, or a `See` opener on the PR that finishes it.
 - **Lost structure.** A section of the chosen structure that went missing, or an expander
   the format requires.
 - **Coverage claimed from a spec's name.** A spec counts as E2E coverage only if it asserts
