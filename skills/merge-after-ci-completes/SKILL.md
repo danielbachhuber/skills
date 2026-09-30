@@ -108,6 +108,16 @@ With a merge queue, `state` stays `OPEN` until the queue lands it. Report that t
 
 Report the method used, the merge commit SHA, and any checks that were skipped, not passed.
 
+## 7. Archive the bb thread
+
+If `BB_THREAD_ID` is set, you are running inside a bb thread. Once step 6 shows `state: MERGED`, archive it:
+
+```bash
+[ -n "$BB_THREAD_ID" ] && bb thread archive --self
+```
+
+Archive only on a confirmed merge. If the PR is queued, the checks failed, or you stopped for any other reason, leave the thread open so the user sees it. Archiving does not hide your final report; it stays readable in the thread.
+
 ## Common mistakes
 
 | Mistake | Fix |
@@ -119,3 +129,4 @@ Report the method used, the merge commit SHA, and any checks that were skipped, 
 | Passing a method flag on a merge-queue repo | Let the queue decide |
 | Merging without `--match-head-commit` | A push during the wait would merge unwatched code |
 | Rerunning a failed check to get to green | Report it and ask; a failure is a result |
+| Archiving the bb thread when the PR is only queued or not merged | Archive only after `state: MERGED` |
