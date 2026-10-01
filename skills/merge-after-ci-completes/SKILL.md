@@ -28,6 +28,36 @@ Stop and report before waiting if any of these would block the merge at the end 
 
 `mergeStateStatus: BLOCKED` on its own usually just means checks are still running. Record `headRefOid`: that is the commit you are waiting on and the only one you will merge.
 
+### Check whether the PR is in a stack
+
+A PR in a GitHub stack (for example one created or imported with `gh stack`) cannot be merged with `gh pr merge`. GitHub refuses with "This pull request is part of a stack and must be merged using the asynchronous merge REST API." Find out now, before waiting on CI:
+
+```bash
+gh api graphql -F owner=<owner> -F name=<repo> -F n=<n> -f query='
+  query($owner: String!, $name: String!, $n: Int!) {
+    repository(owner: $owner, name: $name) {
+      pullRequest(number: $n) {
+        stackEntry { position }
+        stack {
+          number size
+          entries(first: 100) {
+            nodes { position pullRequest { number url state } }
+          }
+        }
+      }
+    }
+  }'
+```
+
+`stack: null` means the PR is not stacked; continue to step 2 and merge with `gh pr merge` in step 5.
+
+Otherwise, tell the user the PR is in stack #`<stack.number>` at position `<stackEntry.position>` of `<stack.size>`. Position 1 is the bottom, next to the base branch. Then look at the entries below the watched PR (lower `position`):
+
+- **All below it are `MERGED`, or it is at position 1.** It is the lowest unmerged PR, so only it will merge. Say so and continue.
+- **Any below it are not `MERGED`.** Refuse. Merging it would merge every open PR below it too, and this skill merges a stack one PR at a time from the bottom. List the unmerged PRs below it by number and URL, and stop without waiting on CI.
+
+PRs above the watched PR (higher `position`) are never merged by this skill.
+
 ## 2. Pick the merge method
 
 ```bash
@@ -98,13 +128,58 @@ gh pr merge <n> -R <owner>/<repo> --<method> --match-head-commit <headRefOid>
 - Leave out `--admin` and `--auto`.
 - If the merge fails, report GitHub's message as-is. Do not retry with other flags.
 
+### Stacked PRs
+
+Do not use `gh pr merge` for a PR in a stack. Do not use `gh stack merge` either: it has no head-commit guard, and with no argument, or with a bare number that matches a stack number, it merges the whole stack.
+
+Call the asynchronous merge REST API instead. Its `sha` field does what `--match-head-commit` does, and it never touches PRs above the watched one. It would also merge any open PRs below it, so first re-run the stack query from step 1 and refuse, as in step 1, if the watched PR is no longer the lowest unmerged one. That can happen if the stack was rearranged during the wait.
+
+Without a merge queue:
+
+```bash
+gh api -X PUT repos/<owner>/<repo>/pulls/<n>/merge-async \
+  -f sha=<headRefOid> -f merge_method=<method> -f merge_action=direct_merge
+```
+
+`<method>` is `merge`, `squash`, or `rebase`, from step 2. With a merge queue (`isMergeQueueEnabled: true`), send `-f sha=<headRefOid> -f merge_action=merge_queue` and no `merge_method`.
+
+The response has a `status` and a `details` object:
+
+| HTTP status | `status` | Means |
+|-------------|----------|-------|
+| 202 | `pending` | Accepted and running in the background. Keep `details.uuid` for step 6. |
+| 200 | `merged` or `enqueued` | It was already merged or already queued. |
+| 409 | `pending` | Another async merge for this PR is already running. Use its `details.uuid`; do not submit again. |
+| 400 | `failed` | Not mergeable (closed, draft). Report `details.message`. |
+
+`gh api` exits non-zero on 400 and 409 but still prints the body. As with `gh pr merge`, report a failure as-is and do not retry with other options.
+
 ## 6. Confirm
+
+For a PR merged with `gh pr merge`:
 
 ```bash
 gh pr view <n> -R <owner>/<repo> --json state,mergedAt,mergeCommit,url
 ```
 
 With a merge queue, `state` stays `OPEN` until the queue lands it. Report that the PR is queued, not merged.
+
+For a stacked PR, the merge runs in the background. Poll its result with the Bash tool's `run_in_background: true` until it leaves `pending`:
+
+```bash
+while s=$(gh api repos/<owner>/<repo>/pulls/<n>/merge-async/<uuid>) &&
+      [ "$(jq -r .status <<<"$s")" = pending ]; do sleep 5; done; echo "$s"
+```
+
+The loop also stops if `gh api` fails. A 404 means the UUID is wrong or the result expired (GitHub keeps it for 24 hours); fall back to the `gh pr view` check below.
+
+| `status` | Do |
+|----------|----|
+| `merged` | `details.sha` is the merge commit. |
+| `enqueued` | Added to the merge queue. This result does not change when the queue later lands it, so report the PR as queued, not merged. |
+| `failed` | Nothing merged; the operation is all-or-nothing. Report `details.message` as-is. Branch protection and repository rules run at this stage, so a missing approval shows up here. |
+
+Then confirm with the same `gh pr view` command as above that the PR shows `state: MERGED`.
 
 Report the method used, the merge commit SHA, and any checks that were skipped, not passed.
 
@@ -128,5 +203,10 @@ Archive only on a confirmed merge. If the PR is queued, the checks failed, or yo
 | Choosing squash because it is tidy | Use `viewerDefaultMergeMethod` |
 | Passing a method flag on a merge-queue repo | Let the queue decide |
 | Merging without `--match-head-commit` | A push during the wait would merge unwatched code |
+| `gh pr merge` on a stacked PR | GitHub refuses; check for a stack in step 1 and use the async merge API |
+| `gh stack merge` with no argument, `--yes`, or a bare number | Merges the whole stack, or the stack with that number; use the async merge API on the watched PR |
+| Calling the async merge API without `sha` | Same as dropping `--match-head-commit` |
+| Merging a stacked PR that has unmerged PRs below it | They would merge too; refuse and name them |
+| Reporting a stacked PR as merged when the API returns 202 | `pending` is not merged; poll the UUID until it settles |
 | Rerunning a failed check to get to green | Report it and ask; a failure is a result |
 | Archiving the bb thread when the PR is only queued or not merged | Archive only after `state: MERGED` |
