@@ -71,9 +71,9 @@ The type decides what the diagram contrasts:
 | `refactor` | Where each responsibility lived before and lives after, and that the same inputs still give the same outputs |
 
 For server code, pick the form from what changed: a `sequenceDiagram` for a request, job,
-or webhook moving between services; an `erDiagram` for a schema change; a
-`stateDiagram-v2` for a record's lifecycle; a flowchart for a decision such as a
-permission check.
+or webhook moving between services; a `gantt` timeline for a race, a lock, or a write that
+lands too late; an `erDiagram` for a schema change; a `stateDiagram-v2` for a record's
+lifecycle; a flowchart for a decision such as a permission check.
 
 Then group the hunks into concerns by what they are for, and write the titles and the files
 for each into `spec.json` (the `concerns` field in step 5's shape).
@@ -215,6 +215,32 @@ header, the file map, and the diff rendering itself:
     them or puts After first.
   - If the diagram is too small to read in `.narrow.png`, cut nodes rather than shrinking
     labels. A diagram with more than about eight nodes a side is showing too much.
+  - Make Before and After two separate diagrams, each with its own title. One diagram
+    with both runs on the same lifelines reads as a single timeline. The side-by-side
+    flowchart above is the one exception.
+- **Timelines.** When the change is about when something happens, such as two requests
+  racing, a lock, or a write that lands after another request has read, use a Mermaid
+  `gantt` chart for each side. Give each request or job its own section, a bar for each
+  function call labeled with the function's name, and a milestone for each moment that
+  decides the outcome, such as a check or a save. Mark the bars that go wrong with
+  `crit`. In the caption, say what the code does at the decisive moment and that the axis
+  shows order, not real times.
+
+  ```
+  gantt
+    dateFormat x
+    axisFormat %L
+    section Request A
+      acquireScoringLockAsync buffers the lock :a1, 0, 4
+      scoreOneCommentAsync for each comment    :a2, 4, 92
+      Request ends, lock saved                 :crit, milestone, a3, 100, 0ms
+    section Request B
+      acquireScoringLockAsync finds no lock    :crit, milestone, b1, 30, 0ms
+      scoreOneCommentAsync scores the same batch :crit, b2, 30, 130
+  ```
+
+  A label cannot contain `:`. A milestone needs a `0ms` duration, or it lands halfway
+  between its start and 0.
 - **Tables.** For behavior that varies by case, such as by mode, role, or state, and that a
   screenshot cannot show, a table with a row per case beats a list. Mark the cells the PR
   changes with `"changed": true`. What a screen shows belongs in `visuals`.
@@ -302,6 +328,7 @@ the review.
 | Leaving files under "Not grouped" | Give incidental changes their own small concern. |
 | Evidence links to a line number taken from a hunk header | Hunk headers give where a hunk starts, not the claim's line. Find the line with `gh api .../contents?ref=<sha>`. |
 | Reporting the page before looking at the screenshots | Read `.desktop.png` and `.narrow.png` first. |
+| One diagram with Before and After stacked on the same lifelines | Readers take it for one timeline. Draw two diagrams. For a race or a lock, draw a `gantt` timeline for each side, with function names on the bars. |
 | A before/after diagram whose two sides look alike | The diagram is not showing the change. Replace it with an example of the data on each side. |
 | Skipping the page because the PR is server-only | Every PR gets a page. Use a sequence diagram, examples, and tables where screenshots would go. |
 | Review findings on the page | The page shows the change. Findings go in chat as draft inline review comments. |
