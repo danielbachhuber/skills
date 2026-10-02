@@ -11,11 +11,13 @@ export const REASONS = {
   unchecked: 'Run but unchecked',
   'outside-layer': 'Outside this layer',
 };
+// How a Then line is checked, from the steps it cites. The words are what the reader sees;
+// the repo's own terms (specification, characterization) go in the legend.
 const LEVELS = {
-  specified: ['Specified', 'An assertion says what the value should be.'],
-  characterized: ['Characterized only', 'A snapshot records the value; nothing says why it is right.'],
-  weak: ['Weak', 'Checked only for being there.'],
-  unchecked: ['Unchecked', 'The cited steps assert nothing.'],
+  specified: ['Asserted', 'The test states the expected value, so it fails when the behavior is wrong.'],
+  characterized: ['Snapshot only', 'The test compares against a recording of what the code returned when the snapshot was written. It fails when the result changes, but a wrong result recorded then passes now.'],
+  weak: ['Checked to exist', 'The test checks only that a value is there, not what it is.'],
+  unchecked: ['Not checked', 'The test runs this, but nothing looks at the result.'],
 };
 const KIND = { exact: 'exact', error: 'error', mock: 'mock call', helper: 'helper', snapshot: 'snapshot', truthy: 'exists', none: 'not checked' };
 
@@ -68,25 +70,36 @@ export function buildTestsSection(ctx) {
     const untouched = gfiles.reduce((n, f) => n + (f.tests ?? []).filter((t) => t.changed === false).length, 0);
     const steps = tests.flatMap((t) => t.steps);
     const cited = new Set();
+    // Each covered scenario's Then lines cite the steps that check them; each line gets its
+    // own label from those steps.
     const covered = (g.covered ?? []).map((c) => {
-      const ids = c.steps ?? [];
-      const found = [];
-      for (const id of ids) {
-        const r = resolve(id);
-        if (!r) problems.push(`${where}: covered item "${c.claim}" cites ${id}, which is not a step or test (see parse-tests.mjs output)`);
-        else {
-          found.push(...r);
-          const testId = id.includes('.') ? id.slice(0, id.lastIndexOf('.')) : id;
-          cited.add(testId);
-        }
+      if (!c.scenario || !Array.isArray(c.then) || !c.then.length) {
+        problems.push(`${where}: each covered item needs "scenario" and a "then" list (Gherkin); got ${JSON.stringify(c).slice(0, 80)}`);
+        return { ...c, then: [] };
       }
-      if (!ids.length) warnings.push(`${where}: covered item "${c.claim}" cites no steps`);
-      return { ...c, level: levelOf(found.flatMap((s) => s.kinds)) };
+      const then = c.then.map((t) => {
+        const line = typeof t === 'string' ? { text: t, steps: [] } : t;
+        const found = [];
+        for (const id of line.steps ?? []) {
+          const r = resolve(id);
+          if (!r) problems.push(`${where}: "${c.scenario}" cites ${id}, which is not a step or test (see parse-tests.mjs output)`);
+          else {
+            found.push(...r);
+            cited.add(id.includes('.') ? id.slice(0, id.lastIndexOf('.')) : id);
+          }
+        }
+        if (!(line.steps ?? []).length) warnings.push(`${where}: "${c.scenario}": Then "${line.text}" cites no steps`);
+        return { ...line, found, level: levelOf(found.flatMap((x) => x.kinds)) };
+      });
+      return { ...c, then };
     });
     for (const t of tests) if (!cited.has(t.id)) warnings.push(`${where}: no covered item cites test ${t.id} "${t.name}"`);
     if (!Array.isArray(g.notCovered)) warnings.push(`${where} has no notCovered list; write [] with a notCoveredNote if nothing is missing`);
     else if (!g.notCovered.length && !g.notCoveredNote) warnings.push(`${where}: notCovered is empty; add a notCoveredNote saying why`);
-    for (const n of g.notCovered ?? []) if (!REASONS[n.reason]) problems.push(`${where}: not-covered item "${n.claim}" has reason "${n.reason}"; use one of ${Object.keys(REASONS).join(', ')}`);
+    for (const n of g.notCovered ?? []) {
+      if (!n.scenario || !Array.isArray(n.then) || !n.then.length) problems.push(`${where}: each not-covered item needs "scenario" and a "then" list (Gherkin); got ${JSON.stringify(n).slice(0, 80)}`);
+      if (!REASONS[n.reason]) problems.push(`${where}: not-covered "${n.scenario}" has reason "${n.reason}"; use one of ${Object.keys(REASONS).join(', ')}`);
+    }
     let coverage = null;
     if (g.coverage) {
       const cp = path.join(dir, g.coverage);
@@ -110,8 +123,8 @@ export function buildTestsSection(ctx) {
       <td>${count(g.covered, () => true)}</td><td class="${(g.notCovered ?? []).length ? 'gap' : ''}">${(g.notCovered ?? []).length}</td></tr>`;
   }).join('');
   const summary = `<div class="tablewrap"><table class="tsum"><thead><tr><th rowspan="2">Group</th><th rowspan="2">Layer</th><th rowspan="2">Tests</th>
-    <th colspan="4">Steps, by what checks them</th><th colspan="2">Behaviors</th></tr>
-    <tr><th title="${esc(LEVELS.specified[1])}">Specified</th><th title="${esc(LEVELS.characterized[1])}">Snapshot only</th><th title="${esc(LEVELS.weak[1])}">Exists only</th><th>Not checked</th><th>Covered</th><th>Not covered</th></tr></thead>
+    <th colspan="4">Checks in the tests</th><th colspan="2">Scenarios</th></tr>
+    <tr><th title="${esc(LEVELS.specified[1])}">Asserted</th><th title="${esc(LEVELS.characterized[1])}">Snapshot only</th><th title="${esc(LEVELS.weak[1])}">Checked to exist</th><th title="${esc(LEVELS.unchecked[1])}">Not checked</th><th>Covered</th><th>Not covered</th></tr></thead>
     <tbody>${summaryRows}</tbody></table></div>`;
 
   const docs = spec.testPatterns?.docs ?? [];
@@ -120,10 +133,9 @@ export function buildTestsSection(ctx) {
     : '';
 
   const stepChip = (id) => `<a class="chip" href="#${anchor(id)}">${esc(id.split(':').pop())}</a>`;
-  const levelTag = (level) => `<span class="lvl lvl-${level}" title="${esc(LEVELS[level][1])}">${LEVELS[level][0]}</span>`;
   const elsewhere = (e) => {
     if (!e) return '';
-    if (typeof e === 'string') return `<div class="elsewhere">${/^(nowhere|none)\b/i.test(e) ? `<strong>${text(e)}</strong>` : `Covered elsewhere: ${text(e)}`}</div>`;
+    if (typeof e === 'string') return `<div class="elsewhere">${/^(nowhere|none|not found|not covered)\b/i.test(e) ? `<strong>${text(e)}</strong>` : `Covered elsewhere: ${text(e)}`}</div>`;
     return `<div class="elsewhere">${e.nowhere ? '<strong>Not covered anywhere.</strong> ' : 'Covered elsewhere: '}${text(e.text ?? '')} ${evidence(e.evidence)}</div>`;
   };
 
@@ -186,30 +198,63 @@ export function buildTestsSection(ctx) {
     </details>`
     : '';
 
+  // The assertion behind an asserted Then line, as the test wrote it, e.g. `toEqual(['blocked'])`.
+  const assertionText = (found) => {
+    const all = found.filter((x) => levelOf(x.kinds) === 'specified');
+    if (!all.length) return '';
+    const one = (a) => (a.kinds.includes('helper') ? `${a.matcher}(…)` : `${a.matcher}(${a.expected ?? ''})`);
+    return all.length === 1 ? one(all[0]) : `${one(all[0])} and ${all.length - 1} more`;
+  };
+  const keywordLines = (kw, lines = []) => lines.map((l, i) => `<div class="gl"><span class="kw">${i ? 'And' : kw}</span> ${text(l)}</div>`).join('');
+  const thenLine = (t, i) => {
+    const how = t.found ? `<span class="lvl lvl-${t.level}" title="${esc(LEVELS[t.level][1])}">${LEVELS[t.level][0]}</span>${t.level === 'specified' ? ` <code class="assert">${esc(assertionText(t.found))}</code>` : ''} ${(t.steps ?? []).map(stepChip).join(' ')}` : '';
+    return `<div class="gl then"><span class="kw">${i ? 'And' : 'Then'}</span> <span>${text(t.text)}</span> <span class="how">${how}</span></div>`;
+  };
+  const scenario = (sc, thenLines, extra = '') => `<div class="scn">
+      <div class="gl"><span class="kw">Scenario:</span> <strong>${text(sc.scenario)}</strong>${sc.inferred ? ' <em class="inferred">inferred</em>' : ''}</div>
+      ${keywordLines('Given', sc.given)}${keywordLines('When', sc.when)}${thenLines}${extra}</div>`;
+
   const cards = groups.map((g, i) => {
     const lv = stepLevels(g.steps);
     const coveredHtml = g.covered.length
-      ? `<ul class="claims">${g.covered.map((c) => `<li>${levelTag(c.level)} <span>${text(c.claim)}${c.inferred ? ' <em class="inferred">inferred</em>' : ''}</span> ${(c.steps ?? []).map(stepChip).join(' ')} ${evidence(c.evidence)}</li>`).join('')}</ul>`
+      ? g.covered.map((c) => scenario(c, c.then.map(thenLine).join(''), c.evidence ? `<div class="gnote">${evidence(c.evidence)}</div>` : '')).join('')
       : '<p class="muted">Nothing listed.</p>';
     const nc = g.notCovered ?? [];
     const notHtml = nc.length
-      ? `<ul class="claims">${nc.map((n) => `<li><span class="why why-${esc(n.reason)}">${esc(REASONS[n.reason] ?? n.reason)}</span> <span>${text(n.claim)}${n.inferred ? ' <em class="inferred">inferred</em>' : ''}</span> ${evidence(n.evidence)}${elsewhere(n.elsewhere)}</li>`).join('')}</ul>`
+      ? nc.map((n) => scenario(n, (n.then ?? []).map((t, j) => `<div class="gl then"><span class="kw">${j ? 'And' : 'Then'}</span> <span>${text(typeof t === 'string' ? t : t.text)}</span></div>`).join(''),
+          `<div class="gnote"><span class="why why-${esc(n.reason)}">${esc(REASONS[n.reason] ?? n.reason)}</span> ${n.note ? text(n.note) : ''} ${evidence(n.evidence)}${elsewhere(n.elsewhere)}</div>`)).join('')
       : `<p>${text(g.notCoveredNote ?? 'Nothing listed.')}</p>`;
     return `<details class="tgroup" id="${g.id}"${i === 0 ? ' open' : ''}>
-      <summary><strong>${text(g.title)}</strong>${g.layer ? ` <span class="layer">${text(g.layer)}</span>` : ''} <span class="muted">${g.gfiles.map((f) => esc(path.basename(f.path))).join(', ')} · ${lv.specified} specified, ${lv.characterized} snapshot only</span> <span class="gapcount">${nc.length} not covered</span></summary>
+      <summary><strong>${text(g.title)}</strong>${g.layer ? ` <span class="layer">${text(g.layer)}</span>` : ''} <span class="muted">${g.gfiles.map((f) => esc(path.basename(f.path))).join(', ')} · ${lv.specified} asserted, ${lv.characterized} snapshot only</span> <span class="gapcount">${nc.length} not covered</span></summary>
       ${g.summary ? `<p class="note">${text(g.summary)}</p>` : ''}
-      <div class="cols tcols"><div><h3>Covered</h3>${coveredHtml}</div><div class="notcov"><h3>Not covered</h3>${notHtml}</div></div>
+      <div class="cols tcols"><div><h3>Covered: what the tests do and check</h3>${coveredHtml}</div><div class="notcov"><h3>Not covered: what no step tries or checks</h3>${notHtml}</div></div>
       ${facts(g)}${coverageHtml(g)}${storyboard(g)}
     </details>`;
   }).join('');
 
   const html = `<section id="tests"><h2>Tests</h2>
-    <p class="muted">For each group: what its tests cover, and what they do not. <strong>Specified</strong> means an assertion says what the value should be; <strong>snapshot only</strong> means the value is recorded and nothing says why it is right.</p>
+    <p>For each group of tests: the scenarios they cover, with how each outcome is checked, and the scenarios they do not cover.</p>
+    <dl class="legend">
+      <dt><span class="lvl lvl-specified">Asserted</span></dt><dd>${esc(LEVELS.specified[1])} The test is a <em>specification</em> of this outcome.</dd>
+      <dt><span class="lvl lvl-characterized">Snapshot only</span></dt><dd>${esc(LEVELS.characterized[1])} The test is a <em>characterization</em>: it pins down what happens, not what should.</dd>
+      <dt><span class="lvl lvl-weak">Checked to exist</span></dt><dd>${esc(LEVELS.weak[1])}</dd>
+      <dt><span class="lvl lvl-unchecked">Not checked</span></dt><dd>${esc(LEVELS.unchecked[1])}</dd>
+    </dl>
     ${docsHtml}${summary}${cards}</section>`;
   return { html, problems, warnings };
 }
 
 export const TESTS_CSS = `
+.legend { display: grid; grid-template-columns: max-content 1fr; gap: 4px 10px; font-size: 13px; margin: 0 0 12px; }
+.legend dd { margin: 0; }
+.scn { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 13.5px; }
+.gl { padding: 1px 0 1px 3.2em; text-indent: -3.2em; }
+.gl .kw { display: inline-block; min-width: 3em; text-indent: 0; font-weight: 600; color: var(--accent); }
+.gl * { text-indent: 0; }
+.gl.then .how { display: block; margin: 1px 0 2px; }
+code.assert { font-size: 11.5px; }
+.gnote { margin-top: 6px; font-size: 12.5px; }
+.notcov .scn { border-color: var(--del); border-style: dashed; }
 .tdocs { background: var(--soft); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
 .tdocs ul { margin: 4px 0 0; padding-left: 18px; }
 table.tsum td:nth-child(n+3), table.tsum th { text-align: center; }

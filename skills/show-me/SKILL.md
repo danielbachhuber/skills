@@ -195,10 +195,12 @@ node ~/.claude/skills/show-me/parse-tests.mjs /tmp/show-me/<repo>-<number> [--ro
 
 It writes `tests.json` and prints every test the PR adds or touches as numbered steps. A
 step is one assertion, or one call by an actor whose result nothing asserts on. Each has
-a kind: `=` exact, `!` error, `m` mock call, `h` helper, which say what the value should be
-(**specified**); `s` snapshot, which records the value without saying why it is right
-(**characterized**); `?` exists, which checks only that something is there (**weak**); and
-`·`, a call nothing checks. Snapshot values are paired with their steps from the `.snap`
+a kind: `=` exact, `!` error, `m` mock call, and `h` helper state the expected value, and
+the page labels them **Asserted**; `s` compares against a snapshot recorded when the test
+was written, labeled **Snapshot only**, since a wrong result recorded then passes now; `?`
+checks only that a value exists, labeled **Checked to exist**; and `·` is a call whose
+result nothing checks. In some repos' terms, asserted outcomes are a specification and
+snapshot-only outcomes a characterization; the page's legend says so. Snapshot values are paired with their steps from the `.snap`
 file. Without `--root` it fetches the files at the head SHA, so it needs the network. Run it
 again whenever `testPatterns` changes; the builder refuses a stale `tests.json`.
 
@@ -230,8 +232,10 @@ leave out `coverage`; the rest of the section still works. Remove the worktree a
 A group is one area of behavior, usually one test file or one `describe` block. For each,
 read the tests and then the code they call, and list the behaviors that code has: each
 permission check, each error it throws, each input variant, each branch that changes the
-result, each side effect such as an email or a stored copy. Every one of them goes in
-`covered` or `notCovered`.
+result, each side effect such as an email or a stored copy. Every one of them becomes a
+scenario in `covered` or in `notCovered`.
+
+Both lists are Gherkin scenarios, so covered and not covered read the same way:
 
 ```json
 "testGroups": [
@@ -241,35 +245,48 @@ result, each side effect such as an email or a stored copy. Every one of them go
     "coverage": "coverage/suspension.json",
     "coverageCommand": "pnpm exec jest --coverage api/suspension.test.ts",
     "covered": [
-      { "claim": "A blocked member's next post is refused.", "steps": ["suspension.test.ts:1.8", "suspension.test.ts:1.9"] }
+      { "scenario": "A blocked member cannot post",
+        "given": ["a moderator has blocked OTHER_MEMBER"],
+        "when": ["OTHER_MEMBER posts a comment"],
+        "then": [
+          { "text": "the post is refused", "steps": ["suspension.test.ts:1.8"] },
+          { "text": "the comment list does not change", "steps": ["suspension.test.ts:1.9"] }
+        ] }
     ],
     "notCovered": [
-      { "claim": "A signed-in non-moderator reading someone else's suspensions is refused.",
-        "reason": "never-run", "evidence": [{ "path": "server/routers/suspensions.ts", "line": 68, "end": 70 }],
+      { "scenario": "A signed-in non-moderator reads someone else's suspensions",
+        "given": ["MEMBER is signed in without moderator access"],
+        "when": ["MEMBER lists OTHER_MEMBER's suspensions"],
+        "then": ["the call is refused as FORBIDDEN"],
+        "reason": "never-run", "note": "Only the signed-out case is tried.",
+        "evidence": [{ "path": "server/routers/suspensions.ts", "line": 68, "end": 70 }],
         "elsewhere": "Nowhere in this PR." }
     ] }
 ]
 ```
 
-- **Covered.** One item per behavior, citing the steps that prove it, by the ids
-  `parse-tests.mjs` printed. A test id such as `suspension.test.ts:1` cites all its steps.
-  Do not choose the level: the builder labels each item Specified, Characterized only, or
-  Weak from the kinds of the steps it cites. Every test must be cited at least once.
-- **Not covered.** Each item has a `reason`:
-  - `never-run`: the coverage run never reached the code. Cite the lines.
-  - `untested`: the code exists or ran, but no step tries this case, such as a role never
-    used, an input never sent, or a state never reached.
-  - `unchecked`: the code runs, but nothing asserts on what it did, such as an email sent
-    through a mocked adapter, or a field that appears only inside a snapshot.
-  - `outside-layer`: what this kind of test cannot see, quoted from the repo's docs.
-
-  Give `evidence` for each, and say in `elsewhere` where it is covered instead, after
-  searching the other tests, or that it is covered nowhere. Mark `"inferred": true` on an
-  item read from the code that coverage does not back.
+- **Covered.** One scenario per behavior, in the order the test does it. Given and When
+  name the actors and actions as the test does. Each Then line is one outcome and cites
+  only the steps that check it, by the ids `parse-tests.mjs` printed; a test id such as
+  `suspension.test.ts:1` cites all its steps. Do not write how it is checked: the builder
+  labels each Then line Asserted, with the assertion itself, or Snapshot only, from the
+  steps it cites. Every test must be cited at least once.
+- **Not covered.** The scenario a test would need, with `then` as plain strings, and:
+  - `reason`, one of:
+    - `never-run`: the coverage run never reached the code. Cite the lines.
+    - `untested`: the code exists or ran, but no step tries this case, such as a role never
+      used, an input never sent, or a state never reached.
+    - `unchecked`: the code runs, but nothing asserts on what it did, such as an email sent
+      through a mocked adapter, or a field that appears only inside a snapshot.
+    - `outside-layer`: what this kind of test cannot see, quoted from the repo's docs.
+  - `note`: why it is not covered, in a sentence, beyond what the scenario says.
+  - `evidence` for each, and `elsewhere`: where it is covered instead, after searching the
+    other tests, or that it is covered nowhere. Mark `"inferred": true` on a scenario read
+    from the code that coverage does not back.
 - **Nothing missing.** Write `"notCovered": []` with a `notCoveredNote` saying why. The
   builder warns about a group with neither.
-- **Judgment goes to chat.** Whether a gap matters, or whether a group has too few
-  specified steps for the repo's standard, is a draft review comment for step 8.
+- **Judgment goes to chat.** Whether a gap matters, or whether a group has too few asserted
+  outcomes for the repo's standard, is a draft review comment for step 8.
 
 In a file the PR only modifies, only the tests whose lines the diff touches are listed;
 the rest are counted and left out.
@@ -455,6 +472,7 @@ the review.
 | Running an E2E suite against a deployment without asking | It resets test users and writes data there. Ask first. |
 | Writing the page into the repo, or posting it | It goes in thread storage. It is the user's to share. |
 | A "Not covered" list of only what you happened to notice | List the behaviors the code under test has, then sort each into covered or not covered. |
+| A Then line citing steps that check different things | Split it, so each line's Asserted or Snapshot only label is about one outcome. |
 | Calling a snapshot-only test weak because a generic rule says so | Read the repo's testing docs first. Report the levels; leave the judgment to chat. |
 | A not-covered item with no evidence or no `elsewhere` | Link the lines, and search the other tests before saying it is covered nowhere. |
 | Coverage for every file the run touched | Pass `--include` for the files the group is about. Seeding and imports reach most of the codebase. |
