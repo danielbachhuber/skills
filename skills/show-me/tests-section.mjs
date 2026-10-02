@@ -128,11 +128,13 @@ export function buildTestsSection(ctx) {
     const seg = (n, cls, label) => (n ? `<span class="${cls}" style="width:${(100 * n) / total}%" title="${n} ${label}"></span>` : '');
     return `<span class="cbar">${seg(o.asserted, 'c-a', 'asserted')}${seg(o.snapshot, 'c-s', 'snapshot only')}${seg(o.weaker, 'c-w', 'checked more weakly')}${seg(o.missing, 'c-m', 'not covered')}</span>`;
   };
-  const summary = `<ul class="tsum">${groups.map((g) => {
+  // The bar and its counts, shown in the summary list and again at the top of each group.
+  const outcomeLine = (g) => {
     const o = outcomes(g);
-    return `<li><a href="#${g.id}">${text(g.title)}</a> <span class="muted">${text(g.layer ?? '')}</span>
-      <div class="sline">${outcomeBar(o)} <span class="k-a">${o.asserted} asserted</span> · <span class="k-s">${o.snapshot} snapshot only</span>${o.weaker ? ` · ${o.weaker} checked more weakly` : ''} · <span class="${o.missing ? 'gap' : ''}">${o.missing} not covered</span> <span class="muted">outcomes, in ${g.covered.length} covered and ${(g.notCovered ?? []).length} not-covered scenarios</span></div></li>`;
-  }).join('')}</ul>
+    return `<div class="sline">${outcomeBar(o)} <span class="k-a">${o.asserted} asserted</span> · <span class="k-s">${o.snapshot} snapshot only</span>${o.weaker ? ` · ${o.weaker} checked more weakly` : ''} · <span class="${o.missing ? 'gap' : ''}">${o.missing} not covered</span> <span class="muted">outcomes, in ${g.covered.length} covered and ${(g.notCovered ?? []).length} not-covered scenarios</span></div>`;
+  };
+  const summary = `<ul class="tsum">${groups.map((g) => `<li><a href="#${g.id}">${text(g.title)}</a> <span class="muted">${text(g.layer ?? '')}</span>
+      ${outcomeLine(g)}</li>`).join('')}</ul>
   <p class="muted barkey">Each bar counts outcomes, the Then lines of a group's scenarios: <span class="k-a">asserted</span>, <span class="k-s">snapshot only</span>, and <span class="gap">not covered</span>. How many Then lines a not-covered scenario has depends on how it was written, so read red as a rough size.</p>`;
 
   const docs = spec.testPatterns?.docs ?? [];
@@ -243,7 +245,6 @@ export function buildTestsSection(ctx) {
   };
 
   const cards = groups.map((g, i) => {
-    const lv = stepLevels(g.steps);
     const coveredHtml = g.covered.length
       ? g.covered.map((c) => featureCovered(c) + (c.evidence ? `<div class="gnote">${evidence(c.evidence)}</div>` : '')).join('')
       : '<p class="muted">Nothing listed.</p>';
@@ -252,7 +253,8 @@ export function buildTestsSection(ctx) {
       ? nc.map(featureMissing).join('')
       : `<p>${text(g.notCoveredNote ?? 'Nothing listed.')}</p>`;
     return `<details class="tgroup" id="${g.id}"${i === 0 ? ' open' : ''}>
-      <summary><strong>${text(g.title)}</strong>${g.layer ? ` <span class="layer">${text(g.layer)}</span>` : ''} <span class="muted">${g.gfiles.map((f) => esc(path.basename(f.path))).join(', ')} · ${lv.specified} asserted, ${lv.characterized} snapshot only</span> <span class="gapcount">${nc.length} not covered</span></summary>
+      <summary><strong>${text(g.title)}</strong>${g.layer ? ` <span class="layer">${text(g.layer)}</span>` : ''} <span class="muted">${g.gfiles.map((f) => esc(path.basename(f.path))).join(', ')}</span>
+        ${outcomeLine(g)}</summary>
       ${g.summary ? `<p class="note">${text(g.summary)}</p>` : ''}
       <div class="tstack"><h3>Covered: what the tests do and check</h3>${coveredHtml}</div><div class="tstack notcov"><h3>Not covered: what no step tries or checks</h3>${notHtml}</div>
       ${facts(g)}${coverageHtml(g)}${storyboard(g)}
