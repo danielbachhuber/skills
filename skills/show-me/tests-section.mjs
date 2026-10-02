@@ -85,7 +85,7 @@ export function buildTestsSection(ctx) {
           if (!r) problems.push(`${where}: "${c.scenario}" cites ${id}, which is not a step or test (see parse-tests.mjs output)`);
           else {
             found.push(...r);
-            cited.add(id.includes('.') ? id.slice(0, id.lastIndexOf('.')) : id);
+            cited.add(stepById.has(id) ? stepById.get(id).test.id : id);
           }
         }
         if (!(line.steps ?? []).length) warnings.push(`${where}: "${c.scenario}": Then "${line.text}" cites no steps`);
