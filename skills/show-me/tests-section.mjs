@@ -133,6 +133,16 @@ export function buildTestsSection(ctx) {
     const o = outcomes(g);
     return `<div class="sline">${outcomeBar(o)} <span class="k-a">${o.asserted} asserted</span> · <span class="k-s">${o.snapshot} snapshot only</span>${o.weaker ? ` · ${o.weaker} checked more weakly` : ''} · <span class="${o.missing ? 'gap' : ''}">${o.missing} not covered</span> <span class="muted">outcomes, in ${g.covered.length} covered and ${(g.notCovered ?? []).length} not-covered scenarios</span></div>`;
   };
+  // The whole PR's tests at a glance: one bar over every group's outcomes, then what the
+  // agent wrote in spec.testSummary about what the tests add and the gaps that repeat.
+  const totals = groups.map(outcomes).reduce((a, o) => ({ asserted: a.asserted + o.asserted, snapshot: a.snapshot + o.snapshot, weaker: a.weaker + o.weaker, missing: a.missing + o.missing }), { asserted: 0, snapshot: 0, weaker: 0, missing: 0 });
+  const ts = spec.testSummary;
+  if (!ts) warnings.push('spec.json has testGroups but no testSummary; write one or two sentences on what the tests add, and the gaps that repeat across groups');
+  const overview = `<div class="toverview">
+    <div class="sline total">${outcomeBar(totals).replace('class="cbar"', 'class="cbar wide"')} <span class="k-a">${totals.asserted} asserted</span> · <span class="k-s">${totals.snapshot} snapshot only</span>${totals.weaker ? ` · ${totals.weaker} checked more weakly` : ''} · <span class="gap">${totals.missing} not covered</span> <span class="muted">outcomes across ${groups.length} groups and ${groups.reduce((n, g) => n + g.tests.length, 0)} tests</span></div>
+    ${ts?.text ? `<p>${text(ts.text)}</p>` : ''}
+    ${ts?.points?.length ? `<p class="tpoints-head"><strong>${text(ts.pointsTitle ?? 'Gaps that repeat across groups')}</strong></p><ul class="tpoints">${ts.points.map((x) => `<li>${text(x)}</li>`).join('')}</ul>` : ''}
+  </div>`;
   const summary = `<ul class="tsum">${groups.map((g) => `<li><a href="#${g.id}">${text(g.title)}</a> <span class="muted">${text(g.layer ?? '')}</span>
       ${outcomeLine(g)}</li>`).join('')}</ul>
   <p class="muted barkey">Each bar counts outcomes, the Then lines of a group's scenarios: <span class="k-a">asserted</span>, <span class="k-s">snapshot only</span>, and <span class="gap">not covered</span>. How many Then lines a not-covered scenario has depends on how it was written, so read red as a rough size.</p>`;
@@ -262,6 +272,7 @@ export function buildTestsSection(ctx) {
   }).join('');
 
   const html = `<section id="tests"><h2>Tests</h2>
+    ${overview}${summary}
     <p>For each group of tests: the scenarios they cover, with how each outcome is checked, and the scenarios they do not cover.</p>
     <dl class="legend">
       <dt><code class="gc-specified"># asserted</code></dt><dd>${esc(LEVELS.specified[1])} The test is a <em>specification</em> of this outcome.</dd>
@@ -269,7 +280,7 @@ export function buildTestsSection(ctx) {
       <dt><code class="gc-weak"># checked to exist</code></dt><dd>${esc(LEVELS.weak[1])}</dd>
       <dt><code class="gc-unchecked"># not checked</code></dt><dd>${esc(LEVELS.unchecked[1])}</dd>
     </dl>
-    ${docsHtml}${summary}${cards}</section>`;
+    ${docsHtml}${cards}</section>`;
   return { html, problems, warnings };
 }
 
@@ -298,6 +309,12 @@ ul.tsum li { padding: 6px 0; border-bottom: 1px solid var(--line); }
 .k-a { color: var(--add); } .k-s { color: #9a6700; }
 @media (prefers-color-scheme: dark) { .k-s { color: #d29922; } }
 .barkey { font-size: 12.5px; margin: -6px 0 14px; }
+.toverview { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0 0 14px; }
+.toverview p { margin: 8px 0 0; }
+.toverview .total { font-size: 14px; }
+.cbar.wide { width: 260px; height: 12px; border-radius: 6px; }
+.tpoints { margin: 4px 0 0; padding-left: 20px; }
+.tpoints li { margin-bottom: 4px; }
 .tdocs { background: var(--soft); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
 .tdocs ul { margin: 4px 0 0; padding-left: 18px; }
 .tgroup { border: 1px solid var(--line); border-radius: 8px; margin: 12px 0; }

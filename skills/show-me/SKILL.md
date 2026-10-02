@@ -285,6 +285,18 @@ Both lists are Gherkin scenarios, so covered and not covered read the same way:
     from the code that coverage does not back.
 - **Nothing missing.** Write `"notCovered": []` with a `notCoveredNote` saying why. The
   builder warns about a group with neither.
+- **Summary.** `testSummary` opens the section, under a bar the builder totals across all
+  groups. `text` says in two or three sentences what the tests add and how they check it.
+  `points` lists the gaps that repeat across groups, each a bold lead and a sentence, with
+  the number of groups it appears in. Count those from your `notCovered` lists rather than
+  estimating.
+
+  ```json
+  "testSummary": {
+    "text": "Adds ten scenario tests that drive the API as each role and snapshot every result.",
+    "points": ["**Emails are never checked.** Every send goes through the mocked adapter, and no step looks at it (6 groups)."]
+  }
+  ```
 - **Judgment goes to chat.** Whether a gap matters, or whether a group has too few asserted
   outcomes for the repo's standard, is a draft review comment for step 8.
 
