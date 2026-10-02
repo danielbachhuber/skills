@@ -1,6 +1,6 @@
 ---
 name: show-me
-description: Use only when the user asks to be shown a pull request visually, such as "show me #6169", "/show-me <PR>", or a request for a visual version, map, or overview page of a PR's changes, whether the PR changes the UI, the server, or both. Not for ordinary code reviews or PR descriptions unless the user asks for the page.
+description: Use only when the user asks to be shown a pull request visually, such as "show me #6169", "/show-me <PR>", or a request for a visual version, map, or overview page of a PR's changes, whether the PR changes the UI, the server, or both, including a page of what a PR's tests cover and do not cover. Not for ordinary code reviews or PR descriptions unless the user asks for the page.
 argument-hint: <PR number or URL>
 ---
 
@@ -11,15 +11,20 @@ before or during a review. One sentence says what the PR does. Screenshots show 
 changed on screen, a diagram shows how the code changed, and each claim sits next to the
 lines that prove it. It is not a prettier copy of the diff in file order.
 
+When the PR adds or changes tests, the page also says, for each group of tests, what they
+cover and what they do not, with every test laid out step by step beside the values it
+checks.
+
 Every PR gets a page, including one that changes only server code. A server-only PR has
 no screenshots; diagrams of the request or data flow, tables, and before/after examples do
 the showing instead. Never skip the page because nothing on screen changed.
 
 The page is about the PR's changes, not a review of them. Anything that looks wrong goes
-to the user in chat as a draft inline review comment (step 7), not onto the page.
+to the user in chat as a draft inline review comment (step 8), not onto the page.
 
-The page goes in bb's thread storage and is shown inline. Nothing is committed, posted, or
-checked out.
+The page goes in bb's thread storage and is shown inline. Nothing is committed or posted,
+and nothing is checked out into the user's own working copy. Running tests for coverage
+uses a temporary worktree under `/tmp`.
 
 ## 1. Fetch
 
@@ -76,7 +81,7 @@ lands too late; an `erDiagram` for a schema change; a `stateDiagram-v2` for a re
 lifecycle; a flowchart for a decision such as a permission check.
 
 Then group the hunks into concerns by what they are for, and write the titles and the files
-for each into `spec.json` (the `concerns` field in step 5's shape).
+for each into `spec.json` (the `concerns` field in step 6's shape).
 
 ## 3. Compare with the author's grouping
 
@@ -97,7 +102,7 @@ When there is one, compare it with yours:
   shows you misread the diff, and say that too. Do not change yours just to agree.
 - **A mismatch the reviewer should know about,** such as a commit that changes more than
   its message says or a claim in the description the diff does not support, is a draft
-  review comment for step 7. It does not go on the page.
+  review comment for step 8. It does not go on the page.
 - **Commits that undo each other,** such as a move and then its revert, cancel out. Say
   so in the note on the concern they touched, rather than counting them as a part of the
   author's grouping.
@@ -151,11 +156,125 @@ Get the screenshots in this order:
      node ~/.claude/skills/show-me/trace-frames.mjs <trace.zip> /tmp/show-me/<repo>-<number>/visuals/strip-before --match 'goto|click|fill'
      ```
 3. **Nothing on screen changed,** as in a server-only PR. Leave out `visuals` and carry on:
-   the diagrams, examples, and tables in step 5 show the change.
+   the diagrams, examples, and tables in step 6 show the change.
 
 A table that describes what a screen shows in words is a sign a screenshot is missing.
 
-## 5. Write the rest of `spec.json`
+## 5. Say what the tests cover, and what they do not
+
+When the PR adds or changes tests, the page gets a Tests section. For each group of tests
+it says, item by item, what the tests cover and what they do not. "Not covered" is the
+point of the section: a reviewer reads it to decide whether the tests are enough without
+reading every test and snapshot. Skip this step only when the PR changes no test files.
+
+### Learn how this repo tests
+
+Before writing anything, find the repo's own conventions and record them in `spec.json`
+as `testPatterns`:
+
+- **Testing docs and decisions.** Search `docs/`, `CONTRIBUTING*`, ADRs, and READMEs beside
+  the tests for what each kind of test is for and what it does not cover. Quote the lines
+  that matter in `testPatterns.docs`, each with `path`, `line`, and `says`. Add `ref` (a
+  SHA, such as the base branch's) when the PR branch has an older copy of the doc.
+- **Recent reviews.** Read the reviews on two or three recent PRs that touch the same test
+  directories (`gh pr list --search "<dir>" --state all`, then `gh api
+  repos/<owner>/<repo>/pulls/<n>/reviews`). A standard such as "add explicit assertions
+  beside the snapshots" shows up there before it reaches the docs.
+- **Helpers.** `actorFactories` lists functions that make a client for a user, such as
+  `apiAs` in `apiAs(MODERATOR)`, so a step shows who made the call. `assertionHelpers`
+  lists functions that are assertions, such as `expectPosted`. Names starting `expect` or
+  `assert` count already.
+- **Snapshots.** `snapshots` maps a test file to its snapshot file, only when a custom
+  resolver puts it somewhere other than `__snapshots__/` beside the test.
+
+### Parse the tests
+
+```bash
+node ~/.claude/skills/show-me/parse-tests.mjs /tmp/show-me/<repo>-<number> [--root <checkout at the head SHA>]
+```
+
+It writes `tests.json` and prints every test the PR adds or touches as numbered steps. A
+step is one assertion, or one call by an actor whose result nothing asserts on. Each has
+a kind: `=` exact, `!` error, `m` mock call, `h` helper, which say what the value should be
+(**specified**); `s` snapshot, which records the value without saying why it is right
+(**characterized**); `?` exists, which checks only that something is there (**weak**); and
+`·`, a call nothing checks. Snapshot values are paired with their steps from the `.snap`
+file. Without `--root` it fetches the files at the head SHA, so it needs the network. Run it
+again whenever `testPatterns` changes; the builder refuses a stale `tests.json`.
+
+### Run each group's tests with coverage
+
+In a temporary worktree at the head SHA (`git worktree add --detach /tmp/show-me/wt-<number>
+<sha>`, never the user's own checkout), install with the repo's package manager and Node
+version, then run each group's test files alone with coverage, using the repo's own
+coverage script's options where there is one. Jest: `--coverage --coverageReporters=json
+--coverageDirectory <workdir>/coverage/raw/<group>`. Vitest: `--coverage.enabled
+--coverage.reporter=json --coverage.reportsDirectory <same>`. Then summarize the source
+files the group is about:
+
+```bash
+node ~/.claude/skills/show-me/summarize-coverage.mjs <workdir>/coverage/raw/<group>/coverage-final.json \
+  --root /tmp/show-me/wt-<number> --include '<regex for the files under test>' --out <workdir>/coverage/<group>.json
+```
+
+Loading modules and seeding test data touches many files, so `--include` names the
+handlers and modules that implement what the group calls. The summary lists the functions
+never called and the line ranges never run.
+
+Read the test setup before running anything. If the tests need a database or a service you
+cannot confirm is local, ask first. If you cannot run them, say so under `unverified` and
+leave out `coverage`; the rest of the section still works. Remove the worktree afterwards.
+
+### Write the groups
+
+A group is one area of behavior, usually one test file or one `describe` block. For each,
+read the tests and then the code they call, and list the behaviors that code has: each
+permission check, each error it throws, each input variant, each branch that changes the
+result, each side effect such as an email or a stored copy. Every one of them goes in
+`covered` or `notCovered`.
+
+```json
+"testGroups": [
+  { "title": "Suspension: blocking and unblocking someone", "layer": "Server API",
+    "files": ["server/api/suspension.test.ts"],
+    "summary": "One sentence on what the tests do.",
+    "coverage": "coverage/suspension.json",
+    "coverageCommand": "pnpm exec jest --coverage api/suspension.test.ts",
+    "covered": [
+      { "claim": "A blocked member's next post is refused.", "steps": ["suspension.test.ts:1.8", "suspension.test.ts:1.9"] }
+    ],
+    "notCovered": [
+      { "claim": "A signed-in non-moderator reading someone else's suspensions is refused.",
+        "reason": "never-run", "evidence": [{ "path": "server/routers/suspensions.ts", "line": 68, "end": 70 }],
+        "elsewhere": "Nowhere in this PR." }
+    ] }
+]
+```
+
+- **Covered.** One item per behavior, citing the steps that prove it, by the ids
+  `parse-tests.mjs` printed. A test id such as `suspension.test.ts:1` cites all its steps.
+  Do not choose the level: the builder labels each item Specified, Characterized only, or
+  Weak from the kinds of the steps it cites. Every test must be cited at least once.
+- **Not covered.** Each item has a `reason`:
+  - `never-run`: the coverage run never reached the code. Cite the lines.
+  - `untested`: the code exists or ran, but no step tries this case, such as a role never
+    used, an input never sent, or a state never reached.
+  - `unchecked`: the code runs, but nothing asserts on what it did, such as an email sent
+    through a mocked adapter, or a field that appears only inside a snapshot.
+  - `outside-layer`: what this kind of test cannot see, quoted from the repo's docs.
+
+  Give `evidence` for each, and say in `elsewhere` where it is covered instead, after
+  searching the other tests, or that it is covered nowhere. Mark `"inferred": true` on an
+  item read from the code that coverage does not back.
+- **Nothing missing.** Write `"notCovered": []` with a `notCoveredNote` saying why. The
+  builder warns about a group with neither.
+- **Judgment goes to chat.** Whether a gap matters, or whether a group has too few
+  specified steps for the repo's standard, is a draft review comment for step 8.
+
+In a file the PR only modifies, only the tests whose lines the diff touches are listed;
+the rest are counted and left out.
+
+## 6. Write the rest of `spec.json`
 
 `/tmp/show-me/<repo>-<number>/spec.json` holds only the judgment. The builder makes the
 header, the file map, and the diff rendering itself:
@@ -279,7 +398,7 @@ header, the file map, and the diff rendering itself:
   following a move. A file with even one meaningful change stays out of `trivial`.
 - **Unverified.** What you did not check: tests not run, behavior inferred from reading.
 
-## 6. Build and check
+## 7. Build and check
 
 ```bash
 node ~/.claude/skills/show-me/build-page.mjs /tmp/show-me/<repo>-<number>
@@ -295,7 +414,7 @@ the sandbox disabled. It saves screenshots of the page as a reader first sees it
 `.desktop-dark.png`, and `.narrow.png`. Read the desktop and narrow ones. A page that loads
 without errors can still have a diagram too small to read or a claim in the wrong column.
 
-## 7. Show it
+## 8. Show it
 
 ```bash
 mkdir -p "$BB_THREAD_STORAGE/show-me"
@@ -335,3 +454,7 @@ the review.
 | A table describing what each screen shows | Screenshots of those screens, from the visual regression reports or an E2E film strip. |
 | Running an E2E suite against a deployment without asking | It resets test users and writes data there. Ask first. |
 | Writing the page into the repo, or posting it | It goes in thread storage. It is the user's to share. |
+| A "Not covered" list of only what you happened to notice | List the behaviors the code under test has, then sort each into covered or not covered. |
+| Calling a snapshot-only test weak because a generic rule says so | Read the repo's testing docs first. Report the levels; leave the judgment to chat. |
+| A not-covered item with no evidence or no `elsewhere` | Link the lines, and search the other tests before saying it is covered nowhere. |
+| Coverage for every file the run touched | Pass `--include` for the files the group is about. Seeding and imports reach most of the codebase. |

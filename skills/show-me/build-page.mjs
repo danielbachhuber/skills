@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { buildTestsSection, TESTS_CSS } from './tests-section.mjs';
 
 const [dir, outArg] = process.argv.slice(2);
 if (!dir) {
@@ -121,7 +122,7 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 const text = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
 const blob = (ev) => {
-  const sha = ev.side === 'old' ? pr.baseRefOid : pr.headRefOid;
+  const sha = ev.ref ?? (ev.side === 'old' ? pr.baseRefOid : pr.headRefOid);
   const range = ev.end ? `#L${ev.line}-L${ev.end}` : ev.line ? `#L${ev.line}` : '';
   return `https://github.com/${repo}/blob/${sha}/${ev.path}${range}`;
 };
@@ -290,6 +291,16 @@ const concernHtml = concerns.map((c, i) => {
   </details>`;
 }).join('');
 
+// Tests: what each group of tests covers and does not, from tests.json (parse-tests.mjs),
+// spec.testGroups, and any coverage summaries (summarize-coverage.mjs).
+const testsSection = buildTestsSection({ dir, spec, pr, files, esc, text, evidence, blob });
+problems.push(...testsSection.problems);
+warnings.push(...testsSection.warnings);
+if (problems.length) {
+  problems.forEach((p) => console.error(`error: ${p}`));
+  process.exit(1);
+}
+
 const patchData = Object.fromEntries(concerns.map((c) => [c.id, c.parts.map((p) => p.patch)]));
 const json = (v) => JSON.stringify(v).replace(/</g, '\\u003c');
 const shortSha = pr.headRefOid.slice(0, 9);
@@ -325,9 +336,9 @@ pre.mermaid { background: var(--bg); text-align: center; margin: 0; }
 .inferred { font-size: 11px; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 0 6px; font-style: normal; }
 .muted { color: var(--muted); }
 .files { list-style: none; margin: 0; padding: 0; }
-.files li { display: grid; grid-template-columns: 22px 1fr auto 90px; gap: 8px; align-items: center; padding: 2px 0; font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; }
+.files li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 90px; gap: 8px; align-items: center; padding: 2px 0; font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; }
 .files .fname { overflow-wrap: anywhere; }
-@media (max-width: 560px) { .files li { grid-template-columns: 22px 1fr auto; } .bar { display: none; } }
+@media (max-width: 560px) { .files li { grid-template-columns: 22px minmax(0, 1fr) auto; } .bar { display: none; } }
 .badge { display: inline-block; width: 18px; text-align: center; border-radius: 4px; font-size: 11px; font-weight: 700; color: #fff; background: var(--muted); font-family: ui-monospace, Menlo, monospace; }
 .st-added .badge { background: var(--add); } .st-removed .badge { background: var(--del); } .st-renamed .badge { background: var(--accent); }
 .plus { color: var(--add); } .minus { color: var(--del); } .arrow { color: var(--accent); font-weight: 700; }
@@ -363,6 +374,7 @@ th { background: var(--soft); }
 td.changed { background: #fff8c5; }
 @media (prefers-color-scheme: dark) { td.changed { background: #3b2e00; } }
 footer { color: var(--muted); font-size: 12px; margin: 30px 0 10px; }
+${TESTS_CSS}
 </style></head>
 <body><main>
 <header>
@@ -373,6 +385,7 @@ footer { color: var(--muted); font-size: 12px; margin: 30px 0 10px; }
 </header>
 ${visuals ? `<section><h2>On screen</h2>${visuals}</section>` : ''}
 ${diagrams || tables || examples ? `<section><h2>Before and after</h2>${diagrams}${examples}${tables}</section>` : ''}
+${testsSection.html}
 <section><h2>Kept and changed</h2>
   <div class="cols"><div><h3>Behaves as before</h3>${claims(spec.kept)}</div><div><h3>Changes</h3>${claims(spec.changed)}</div></div>
   ${spec.unverified?.length ? `<p class="muted"><strong>Not checked:</strong> ${spec.unverified.map(text).join(' · ')}</p>` : ''}
@@ -425,7 +438,13 @@ async function renderDiffs(concern) {
 }
 document.querySelectorAll('details.concern').forEach((d) => d.addEventListener('toggle', () => d.open && renderDiffs(d)));
 // A link from the file map opens the concern it points to.
-addEventListener('hashchange', () => { const d = document.getElementById(location.hash.slice(1)); if (d?.tagName === 'DETAILS') d.open = true; });
+// A link opens every collapsed section around what it points to, such as a step in a storyboard.
+const reveal = () => {
+  for (let el = document.getElementById(decodeURIComponent(location.hash.slice(1))); el; el = el.parentElement) if (el.tagName === 'DETAILS') el.open = true;
+  document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView({ block: 'center' });
+};
+addEventListener('hashchange', reveal);
+document.addEventListener('click', (e) => { const a = e.target.closest('a[href^="#"]'); if (a && a.getAttribute('href') === location.hash) reveal(); });
 
 try {
   await Promise.all([diagrams(), ...[...document.querySelectorAll('details.concern[open]')].map(renderDiffs)]);
