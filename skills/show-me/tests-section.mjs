@@ -116,16 +116,19 @@ export function buildTestsSection(ctx) {
     return { specified: count(asserted, (s) => s.level === 'specified'), characterized: count(asserted, (s) => s.level === 'characterized'), weak: count(asserted, (s) => s.level === 'weak'), unchecked: count(steps, (s) => s.unchecked) };
   };
 
-  const summaryRows = groups.map((g) => {
+  // One line per group: its scenarios covered and not, then a bar of how its checks are made.
+  const checkBar = (lv) => {
+    const total = lv.specified + lv.characterized + lv.weak + lv.unchecked || 1;
+    const seg = (n, cls) => (n ? `<span class="${cls}" style="width:${(100 * n) / total}%"></span>` : '');
+    return `<span class="cbar">${seg(lv.specified, 'c-a')}${seg(lv.characterized, 'c-s')}${seg(lv.weak + lv.unchecked, 'c-w')}</span>`;
+  };
+  const summary = `<ul class="tsum">${groups.map((g) => {
     const lv = stepLevels(g.steps);
-    return `<tr><td><a href="#${g.id}">${text(g.title)}</a></td><td>${text(g.layer ?? '')}</td><td>${g.tests.length}</td>
-      <td>${lv.specified}</td><td>${lv.characterized}</td><td>${lv.weak || ''}</td><td>${lv.unchecked || ''}</td>
-      <td>${count(g.covered, () => true)}</td><td class="${(g.notCovered ?? []).length ? 'gap' : ''}">${(g.notCovered ?? []).length}</td></tr>`;
-  }).join('');
-  const summary = `<div class="tablewrap"><table class="tsum"><thead><tr><th rowspan="2">Group</th><th rowspan="2">Layer</th><th rowspan="2">Tests</th>
-    <th colspan="4">Checks in the tests</th><th colspan="2">Scenarios</th></tr>
-    <tr><th title="${esc(LEVELS.specified[1])}">Asserted</th><th title="${esc(LEVELS.characterized[1])}">Snapshot only</th><th title="${esc(LEVELS.weak[1])}">Checked to exist</th><th title="${esc(LEVELS.unchecked[1])}">Not checked</th><th>Covered</th><th>Not covered</th></tr></thead>
-    <tbody>${summaryRows}</tbody></table></div>`;
+    const nc = (g.notCovered ?? []).length;
+    const weak = lv.weak + lv.unchecked;
+    return `<li><a href="#${g.id}">${text(g.title)}</a> <span class="muted">${text(g.layer ?? '')}</span>
+      <div class="sline"><span>${g.covered.length} covered</span> · <span class="${nc ? 'gap' : ''}">${nc} not covered</span> · ${checkBar(lv)} <span class="muted">${lv.specified} asserted, ${lv.characterized} snapshot only${weak ? `, ${weak} weaker` : ''}</span></div></li>`;
+  }).join('')}</ul>`;
 
   const docs = spec.testPatterns?.docs ?? [];
   const docsHtml = docs.length
@@ -205,29 +208,48 @@ export function buildTestsSection(ctx) {
     const one = (a) => (a.kinds.includes('helper') ? `${a.matcher}(…)` : `${a.matcher}(${a.expected ?? ''})`);
     return all.length === 1 ? one(all[0]) : `${one(all[0])} and ${all.length - 1} more`;
   };
-  const keywordLines = (kw, lines = []) => lines.map((l, i) => `<div class="gl"><span class="kw">${i ? 'And' : kw}</span> ${text(l)}</div>`).join('');
-  const thenLine = (t, i) => {
-    const how = t.found ? `<span class="lvl lvl-${t.level}" title="${esc(LEVELS[t.level][1])}">${LEVELS[t.level][0]}</span>${t.level === 'specified' ? ` <code class="assert">${esc(assertionText(t.found))}</code>` : ''} ${(t.steps ?? []).map(stepChip).join(' ')}` : '';
-    return `<div class="gl then"><span class="kw">${i ? 'And' : 'Then'}</span> <span>${text(t.text)}</span> <span class="how">${how}</span></div>`;
+  // Scenarios are drawn as a .feature file: keywords, then each covered Then line's check as
+  // a trailing comment, and a not-covered scenario's reason as a tag above it.
+  const plain = (str) => esc(String(str ?? '').replace(/`/g, ''));
+  const kwLine = (kw, line) => `  <span class="gk">${kw}</span> ${plain(line)}`;
+  const stepsBlock = (kw, lines = []) => lines.map((l, i) => kwLine(i ? 'And' : kw, l));
+  const COMMENT = { specified: 'asserted', characterized: 'snapshot only', weak: 'checked to exist', unchecked: 'not checked' };
+  const featureCovered = (c) => {
+    const thens = c.then.map((t, i) => ({ head: `  ${i ? 'And' : 'Then'} ${String(t.text).replace(/`/g, '')}`, t }));
+    const width = Math.min(64, Math.max(...thens.map((x) => x.head.length)));
+    const thenHtml = thens.map(({ head, t }, i) => {
+      const how = `${COMMENT[t.level]}${t.level === 'specified' ? `: ${esc(assertionText(t.found))}` : ''}`;
+      const refs = (t.steps ?? []).map((id) => `<a href="#${anchor(id)}">${esc(id.split(':').pop())}</a>`).join(' ');
+      // A comment that would make the line too long goes on its own line, under the Then.
+      const commentLength = 2 + `${COMMENT[t.level]}${t.level === 'specified' ? `: ${assertionText(t.found)}` : ''}`.length + 2 + (t.steps ?? []).join(' ').length / 2;
+      const pad = head.length <= width && width + 2 + commentLength <= 104 ? ' '.repeat(width - head.length + 2) : `\n${' '.repeat(7)}`;
+      return `${kwLine(i ? 'And' : 'Then', t.text)}${pad}<span class="gc gc-${t.level}"># ${how}  ${refs}</span>`;
+    });
+    const lines = [`<span class="gk">Scenario:</span> <strong>${plain(c.scenario)}</strong>${c.inferred ? '  <span class="gc"># inferred</span>' : ''}`,
+      ...stepsBlock('Given', c.given), ...stepsBlock('When', c.when), ...thenHtml];
+    return `<pre class="feature">${lines.join('\n')}</pre>`;
   };
-  const scenario = (sc, thenLines, extra = '') => `<div class="scn">
-      <div class="gl"><span class="kw">Scenario:</span> <strong>${text(sc.scenario)}</strong>${sc.inferred ? ' <em class="inferred">inferred</em>' : ''}</div>
-      ${keywordLines('Given', sc.given)}${keywordLines('When', sc.when)}${thenLines}${extra}</div>`;
+  const featureMissing = (n) => {
+    const tags = [`@${n.reason}`, n.inferred ? '@inferred' : null].filter(Boolean).map((t) => `<span class="gt">${esc(t)}</span>`).join(' ');
+    const lines = [tags, `<span class="gk">Scenario:</span> <strong>${plain(n.scenario)}</strong>`,
+      ...stepsBlock('Given', n.given), ...stepsBlock('When', n.when), ...stepsBlock('Then', (n.then ?? []).map((t) => (typeof t === 'string' ? t : t.text)))];
+    return `<div class="missing"><pre class="feature">${lines.join('\n')}</pre>
+      <div class="gnote"><span class="why why-${esc(n.reason)}">${esc(REASONS[n.reason] ?? n.reason)}</span> ${n.note ? text(n.note) : ''} ${evidence(n.evidence)}${elsewhere(n.elsewhere)}</div></div>`;
+  };
 
   const cards = groups.map((g, i) => {
     const lv = stepLevels(g.steps);
     const coveredHtml = g.covered.length
-      ? g.covered.map((c) => scenario(c, c.then.map(thenLine).join(''), c.evidence ? `<div class="gnote">${evidence(c.evidence)}</div>` : '')).join('')
+      ? g.covered.map((c) => featureCovered(c) + (c.evidence ? `<div class="gnote">${evidence(c.evidence)}</div>` : '')).join('')
       : '<p class="muted">Nothing listed.</p>';
     const nc = g.notCovered ?? [];
     const notHtml = nc.length
-      ? nc.map((n) => scenario(n, (n.then ?? []).map((t, j) => `<div class="gl then"><span class="kw">${j ? 'And' : 'Then'}</span> <span>${text(typeof t === 'string' ? t : t.text)}</span></div>`).join(''),
-          `<div class="gnote"><span class="why why-${esc(n.reason)}">${esc(REASONS[n.reason] ?? n.reason)}</span> ${n.note ? text(n.note) : ''} ${evidence(n.evidence)}${elsewhere(n.elsewhere)}</div>`)).join('')
+      ? nc.map(featureMissing).join('')
       : `<p>${text(g.notCoveredNote ?? 'Nothing listed.')}</p>`;
     return `<details class="tgroup" id="${g.id}"${i === 0 ? ' open' : ''}>
       <summary><strong>${text(g.title)}</strong>${g.layer ? ` <span class="layer">${text(g.layer)}</span>` : ''} <span class="muted">${g.gfiles.map((f) => esc(path.basename(f.path))).join(', ')} · ${lv.specified} asserted, ${lv.characterized} snapshot only</span> <span class="gapcount">${nc.length} not covered</span></summary>
       ${g.summary ? `<p class="note">${text(g.summary)}</p>` : ''}
-      <div class="cols tcols"><div><h3>Covered: what the tests do and check</h3>${coveredHtml}</div><div class="notcov"><h3>Not covered: what no step tries or checks</h3>${notHtml}</div></div>
+      <div class="tstack"><h3>Covered: what the tests do and check</h3>${coveredHtml}</div><div class="tstack notcov"><h3>Not covered: what no step tries or checks</h3>${notHtml}</div>
       ${facts(g)}${coverageHtml(g)}${storyboard(g)}
     </details>`;
   }).join('');
@@ -235,10 +257,10 @@ export function buildTestsSection(ctx) {
   const html = `<section id="tests"><h2>Tests</h2>
     <p>For each group of tests: the scenarios they cover, with how each outcome is checked, and the scenarios they do not cover.</p>
     <dl class="legend">
-      <dt><span class="lvl lvl-specified">Asserted</span></dt><dd>${esc(LEVELS.specified[1])} The test is a <em>specification</em> of this outcome.</dd>
-      <dt><span class="lvl lvl-characterized">Snapshot only</span></dt><dd>${esc(LEVELS.characterized[1])} The test is a <em>characterization</em>: it pins down what happens, not what should.</dd>
-      <dt><span class="lvl lvl-weak">Checked to exist</span></dt><dd>${esc(LEVELS.weak[1])}</dd>
-      <dt><span class="lvl lvl-unchecked">Not checked</span></dt><dd>${esc(LEVELS.unchecked[1])}</dd>
+      <dt><code class="gc-specified"># asserted</code></dt><dd>${esc(LEVELS.specified[1])} The test is a <em>specification</em> of this outcome.</dd>
+      <dt><code class="gc-characterized"># snapshot only</code></dt><dd>${esc(LEVELS.characterized[1])} The test is a <em>characterization</em>: it pins down what happens, not what should.</dd>
+      <dt><code class="gc-weak"># checked to exist</code></dt><dd>${esc(LEVELS.weak[1])}</dd>
+      <dt><code class="gc-unchecked"># not checked</code></dt><dd>${esc(LEVELS.unchecked[1])}</dd>
     </dl>
     ${docsHtml}${summary}${cards}</section>`;
   return { html, problems, warnings };
@@ -247,27 +269,34 @@ export function buildTestsSection(ctx) {
 export const TESTS_CSS = `
 .legend { display: grid; grid-template-columns: max-content 1fr; gap: 4px 10px; font-size: 13px; margin: 0 0 12px; }
 .legend dd { margin: 0; }
-.scn { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 13.5px; }
-.gl { padding: 1px 0 1px 3.2em; text-indent: -3.2em; }
-.gl .kw { display: inline-block; min-width: 3em; text-indent: 0; font-weight: 600; color: var(--accent); }
-.gl * { text-indent: 0; }
-.gl.then .how { display: block; margin: 1px 0 2px; }
-code.assert { font-size: 11.5px; }
-.gnote { margin-top: 6px; font-size: 12.5px; }
-.notcov .scn { border-color: var(--del); border-style: dashed; }
+pre.feature { background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 0 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12.5px; line-height: 1.55; }
+pre.feature strong { font-weight: 700; }
+pre.feature a { font-size: 11.5px; }
+.gk { color: #8250df; font-weight: 600; }
+.gt { color: var(--del); }
+.gc { color: var(--muted); display: inline-block; }
+.gc-specified { color: var(--add); }
+.gc-characterized { color: #9a6700; }
+.gc-weak, .gc-unchecked { color: var(--del); }
+@media (prefers-color-scheme: dark) { .gk { color: #d2a8ff; } .gc-characterized { color: #d29922; } }
+.missing { margin-bottom: 14px; }
+.missing pre.feature { border-left: 3px solid var(--del); margin-bottom: 4px; }
+ul.tsum { list-style: none; padding: 0; margin: 0 0 14px; }
+ul.tsum li { padding: 6px 0; border-bottom: 1px solid var(--line); }
+.sline { font-size: 13px; margin-top: 2px; }
+.sline .gap { color: var(--del); font-weight: 600; }
+.cbar { display: inline-flex; width: 120px; height: 8px; border-radius: 4px; overflow: hidden; background: var(--line); vertical-align: middle; }
+.cbar .c-a { background: var(--add); } .cbar .c-s { background: #d4a72c; } .cbar .c-w { background: var(--del); }
 .tdocs { background: var(--soft); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
 .tdocs ul { margin: 4px 0 0; padding-left: 18px; }
-table.tsum td:nth-child(n+3), table.tsum th { text-align: center; }
-table.tsum td:first-child { text-align: left; }
-td.gap { font-weight: 700; color: var(--del); }
 .tgroup { border: 1px solid var(--line); border-radius: 8px; margin: 12px 0; }
 .tgroup > summary { cursor: pointer; padding: 10px 14px; background: var(--soft); border-radius: 8px; }
 .tgroup[open] > summary { border-bottom: 1px solid var(--line); border-radius: 8px 8px 0 0; }
-.tgroup > .note, .tgroup > .cols, .tgroup > .facts, .tgroup > .story { margin: 10px 14px; }
+.tgroup > .note, .tgroup > .tstack, .tgroup > .facts, .tgroup > .story { margin: 10px 14px; }
 .layer { font-size: 11px; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; color: var(--muted); }
 .gapcount { font-size: 12px; color: var(--del); font-weight: 600; margin-left: 6px; }
 .tcols > div { min-width: 0; }
-.notcov { border-left: 3px solid var(--del); padding-left: 12px; }
+.notcov { margin-top: 18px !important; }
 .lvl, .why, .skind { display: inline-block; font-size: 11px; border-radius: 8px; padding: 0 6px; margin-right: 2px; white-space: nowrap; border: 1px solid var(--line); }
 .lvl-specified, .k-exact, .k-error, .k-mock, .k-helper { background: var(--addbg); color: var(--add); border-color: transparent; }
 .lvl-characterized, .k-snapshot { background: #fff8c5; color: #7d4e00; border-color: transparent; }
