@@ -28,6 +28,18 @@ Stop and report before waiting if any of these would block the merge at the end 
 
 `mergeStateStatus: BLOCKED` on its own usually just means checks are still running. Record `headRefOid`: that is the commit you are waiting on and the only one you will merge.
 
+Then check whether the PR is part of a GitHub stack:
+
+```bash
+gh api repos/<owner>/<repo>/pulls/<n> --jq .stack
+```
+
+`null` means it is not, and nothing below applies. Otherwise record `position` (1 is the PR nearest the stack's base branch) and `size`. A stacked PR has to be merged through the asynchronous merge API (step 5), and that merge also merges every open PR below it in the stack.
+
+- **`position` is 1**: only this PR merges. Continue.
+- **`position` is less than `size`**: record the PR directly above, while its base branch still exists, so step 6 can report on it: `gh pr list -R <owner>/<repo> --base <headRefName> --json number,title,url`.
+- **`position` is greater than 1**: the merge would also land the `position - 1` PRs beneath it, which you were not asked to merge. Find them by following the base branch down: `gh pr list -R <owner>/<repo> --head <baseRefName> --json number,title,url,headRefOid`, then repeat with that PR's base until you reach `stack.base.ref`. Stop and list them. Continue only if the user says to merge them too, and then run preflight and step 3 on each of them as well, since their checks and reviews are just as much a condition of the merge.
+
 ## 2. Pick the merge method
 
 ```bash
@@ -88,6 +100,8 @@ If the user wants a rerun, `gh run rerun <run-id> -R <owner>/<repo> --failed` re
 
 ## 5. Merge the commit you watched
 
+### Not stacked
+
 ```bash
 gh pr merge <n> -R <owner>/<repo> --<method> --match-head-commit <headRefOid>
 ```
@@ -98,6 +112,26 @@ gh pr merge <n> -R <owner>/<repo> --<method> --match-head-commit <headRefOid>
 - Leave out `--admin` and `--auto`.
 - If the merge fails, report GitHub's message as-is. Do not retry with other flags.
 
+### Stacked
+
+`gh pr merge` refuses a stacked PR with "This pull request is part of a stack and must be merged using the asynchronous merge REST API." Use [merge-async.sh](merge-async.sh) instead, with `run_in_background: true`. It submits the merge and polls until GitHub reports a result.
+
+```bash
+bash ~/.claude/skills/merge-after-ci-completes/merge-async.sh <n> <owner>/<repo> <headRefOid> <method>
+```
+
+`<method>` is `merge`, `squash`, or `rebase`, from step 2. On a merge-queue repo, leave it out. The head SHA does the job of `--match-head-commit`.
+
+| Marker | Do |
+|--------|----|
+| `MERGED` | Confirm (step 6). `sha` is the merge commit |
+| `ENQUEUED` | Report the PR as queued, not merged |
+| `FAILED` | GitHub could not merge. Report its `message` as-is. "Pull request head branch was modified." means the head is no longer the SHA you watched; treat it like `HEAD_CHANGED` |
+| `REJECTED` | GitHub refused the request. Report the printed body as-is |
+| `TIMED_OUT` | Still pending. Report the `uuid` and ask whether to keep waiting; check it with `gh api repos/<owner>/<repo>/pulls/<n>/merge-async/<uuid>` |
+
+Do not retry a failed or rejected merge with other options, and never pass `bypass_rules`.
+
 ## 6. Confirm
 
 ```bash
@@ -107,6 +141,8 @@ gh pr view <n> -R <owner>/<repo> --json state,mergedAt,mergeCommit,url
 With a merge queue, `state` stays `OPEN` until the queue lands it. Report that the PR is queued, not merged.
 
 Report the method used, the merge commit SHA, and any checks that were skipped, not passed.
+
+For a stacked PR with a PR above it (recorded at preflight), report that PR's current base branch: `gh pr view <above> -R <owner>/<repo> --json number,title,url,baseRefName`. When the repo squash-merges, that PR still carries the merged PR's original commits and needs a rebase onto the base branch that drops them (`git rebase --onto <base> <old-head-sha> <branch>`). Point that out; do not do it unless asked.
 
 ## 7. Archive the bb thread
 
@@ -130,3 +166,5 @@ Archive only on a confirmed merge. If the PR is queued, the checks failed, or yo
 | Merging without `--match-head-commit` | A push during the wait would merge unwatched code |
 | Rerunning a failed check to get to green | Report it and ask; a failure is a result |
 | Archiving the bb thread when the PR is only queued or not merged | Archive only after `state: MERGED` |
+| Retrying a stacked PR with other `gh pr merge` flags | Check `.stack` at preflight and use `merge-async.sh` |
+| Merging a stacked PR above position 1 without asking | It merges every open PR below it too; list them and ask first |
