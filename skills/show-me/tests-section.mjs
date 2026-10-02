@@ -116,19 +116,24 @@ export function buildTestsSection(ctx) {
     return { specified: count(asserted, (s) => s.level === 'specified'), characterized: count(asserted, (s) => s.level === 'characterized'), weak: count(asserted, (s) => s.level === 'weak'), unchecked: count(steps, (s) => s.unchecked) };
   };
 
-  // One line per group: its scenarios covered and not, then a bar of how its checks are made.
-  const checkBar = (lv) => {
-    const total = lv.specified + lv.characterized + lv.weak + lv.unchecked || 1;
-    const seg = (n, cls) => (n ? `<span class="${cls}" style="width:${(100 * n) / total}%"></span>` : '');
-    return `<span class="cbar">${seg(lv.specified, 'c-a')}${seg(lv.characterized, 'c-s')}${seg(lv.weak + lv.unchecked, 'c-w')}</span>`;
+  // One line per group, with a bar over every outcome (Then line) the group should check:
+  // covered and asserted, covered by a snapshot only, covered more weakly, and not covered.
+  const outcomes = (g) => {
+    const lv = (l) => g.covered.flatMap((c) => c.then).filter((t) => t.level === l).length;
+    return { asserted: lv('specified'), snapshot: lv('characterized'), weaker: lv('weak') + lv('unchecked'),
+      missing: (g.notCovered ?? []).reduce((n, x) => n + (x.then ?? []).length, 0) };
+  };
+  const outcomeBar = (o) => {
+    const total = o.asserted + o.snapshot + o.weaker + o.missing || 1;
+    const seg = (n, cls, label) => (n ? `<span class="${cls}" style="width:${(100 * n) / total}%" title="${n} ${label}"></span>` : '');
+    return `<span class="cbar">${seg(o.asserted, 'c-a', 'asserted')}${seg(o.snapshot, 'c-s', 'snapshot only')}${seg(o.weaker, 'c-w', 'checked more weakly')}${seg(o.missing, 'c-m', 'not covered')}</span>`;
   };
   const summary = `<ul class="tsum">${groups.map((g) => {
-    const lv = stepLevels(g.steps);
-    const nc = (g.notCovered ?? []).length;
-    const weak = lv.weak + lv.unchecked;
+    const o = outcomes(g);
     return `<li><a href="#${g.id}">${text(g.title)}</a> <span class="muted">${text(g.layer ?? '')}</span>
-      <div class="sline"><span>${g.covered.length} covered</span> · <span class="${nc ? 'gap' : ''}">${nc} not covered</span> · ${checkBar(lv)} <span class="muted">${lv.specified} asserted, ${lv.characterized} snapshot only${weak ? `, ${weak} weaker` : ''}</span></div></li>`;
-  }).join('')}</ul>`;
+      <div class="sline">${outcomeBar(o)} <span class="k-a">${o.asserted} asserted</span> · <span class="k-s">${o.snapshot} snapshot only</span>${o.weaker ? ` · ${o.weaker} checked more weakly` : ''} · <span class="${o.missing ? 'gap' : ''}">${o.missing} not covered</span> <span class="muted">outcomes, in ${g.covered.length} covered and ${(g.notCovered ?? []).length} not-covered scenarios</span></div></li>`;
+  }).join('')}</ul>
+  <p class="muted barkey">Each bar counts outcomes, the Then lines of a group's scenarios: <span class="k-a">asserted</span>, <span class="k-s">snapshot only</span>, and <span class="gap">not covered</span>. How many Then lines a not-covered scenario has depends on how it was written, so read red as a rough size.</p>`;
 
   const docs = spec.testPatterns?.docs ?? [];
   const docsHtml = docs.length
@@ -286,7 +291,11 @@ ul.tsum li { padding: 6px 0; border-bottom: 1px solid var(--line); }
 .sline { font-size: 13px; margin-top: 2px; }
 .sline .gap { color: var(--del); font-weight: 600; }
 .cbar { display: inline-flex; width: 120px; height: 8px; border-radius: 4px; overflow: hidden; background: var(--line); vertical-align: middle; }
-.cbar .c-a { background: var(--add); } .cbar .c-s { background: #d4a72c; } .cbar .c-w { background: var(--del); }
+.cbar .c-a { background: var(--add); } .cbar .c-s { background: #d4a72c; } .cbar .c-w { background: #e8a0a0; } .cbar .c-m { background: var(--del); }
+.cbar { width: 160px; }
+.k-a { color: var(--add); } .k-s { color: #9a6700; }
+@media (prefers-color-scheme: dark) { .k-s { color: #d29922; } }
+.barkey { font-size: 12.5px; margin: -6px 0 14px; }
 .tdocs { background: var(--soft); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
 .tdocs ul { margin: 4px 0 0; padding-left: 18px; }
 .tgroup { border: 1px solid var(--line); border-radius: 8px; margin: 12px 0; }
