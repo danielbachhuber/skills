@@ -1,6 +1,6 @@
 ---
 name: resolve-merge-conflicts
-description: Use when a pull request conflicts with its base branch, GitHub reports CONFLICTING or DIRTY, or the user asks to merge main into a branch, resolve conflicts, or unblock a stale PR.
+description: Use when a pull request conflicts with its base branch, GitHub reports CONFLICTING or DIRTY, or the user asks to merge main into a branch, rebase a stacked PR or `gh stack`, resolve conflicts, or unblock a stale PR.
 ---
 
 # Resolve Merge Conflicts
@@ -11,7 +11,19 @@ Conflict markers are a symptom, not the job. Git marks the lines where two branc
 
 **Resolving the markers is step 4 of 8.** The work that matters is finding the collisions git could not see.
 
-Merge, never rebase. The branch is already on the remote and under review, so history stays append-only.
+**Stacked PRs need rebases. Every other PR gets a merge.**
+
+- **Stacked PR:** the PR body or GitHub UI names a stack ("stack #N"), or `gh stack checkout <PR URL>` finds one. Always rebase it with `gh stack`, never merge the base branch in. Check this before anything else.
+- **Any other PR:** merge, never rebase. The branch is already on the remote and under review, so history stays append-only.
+
+For a stacked PR, pass the PR URL, not a bare number: `gh stack checkout` tries a bare number as a stack number before a PR number.
+
+1. `gh stack checkout <PR URL>` checks out every branch in the stack.
+2. `gh stack rebase` rebases the stack onto the latest base branch.
+3. Resolve conflicts with steps 3–5 below, then continue the rebase.
+4. Verify with step 6, then ask the user before `gh stack push`, which force-pushes every branch with `--force-with-lease`.
+
+Steps 1, 2 and 7 below assume a merge and don't apply to a stack.
 
 ## 1. Set up a worktree on the PR's own branch
 
@@ -118,7 +130,8 @@ Same for judgment calls you made on the author's behalf: a baseline you loosened
 | Mistake | Fix |
 |---------|-----|
 | Stopping when the markers are gone | Markers are step 4 of 8; step 5 is the real work |
-| Rebasing to get a clean history | Merge, because the branch is pushed and under review |
+| Rebasing an unstacked PR to get a clean history | Merge, because the branch is pushed and under review |
+| Merging the base branch into a stacked PR | Stacked PRs need rebases: `gh stack rebase` |
 | Picking a side | Resolution is usually the union of two intents |
 | Trusting a green typecheck | It catches deleted symbols, never stale patterns |
 | Filtered test run | Full-run-only gates stay silent under a filter |
