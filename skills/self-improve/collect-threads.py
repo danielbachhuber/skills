@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
-"""Dump every bb thread touched in the last N days, for the reviewers.
+"""Pick the bb threads from the last N days worth reviewing, for the reviewers.
 
-Usage: python3 collect-threads.py [--days 7] [--out DIR]
+Usage: python3 collect-threads.py [--days 7] [--top 30] [--out DIR]
 
+Scores every thread `bb tokenomics threads` reports, reads the event logs of
+the best-scoring ones to add their failed commands, and selects the top N.
 Writes into DIR, and prints DIR on the last line:
-  <thread-id>.txt        the minimal transcript
-  <thread-id>.tools.txt  its token usage and tool calls (see tool_stats.py)
-  index.tsv              batch, id, project, origin plugin, user turns, bytes,
-                         title, tool calls, tokens
-  tool-summary.md        tool and token patterns across every thread
+  index.tsv              every scored thread: selected, batch, id, project,
+                         origin plugin, turns, user turns, bytes, title,
+                         tool calls, failed commands, tokens, score
+  <thread-id>.txt        a selected thread's trimmed transcript
+                         (see selection.trim)
+  <thread-id>.tools.txt  its tokenomics numbers, token usage, and tool calls
+                         (see tool_stats.py)
+  tool-summary.md        tool and token patterns across the threads whose
+                         logs were read
+  slow-commands.json     `bb tokenomics commands` for the same days
 
-Threads are packed into batches of about BATCH_BYTES so each reviewer
-subagent gets a similar amount of transcript to read.
+Selected threads are packed into batches of about BATCH_BYTES of trimmed
+transcript so each reviewer subagent gets a similar amount to read.
 Skips the current thread (BB_THREAD_ID) and hidden threads.
 """
 
@@ -23,9 +30,13 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from tool_stats import digest, summary, thread_stats  # noqa: E402
+from selection import estimate, flagged_commands, pack, score, select, signals, trim  # noqa: E402
+from tool_stats import digest, duration, human, summary, thread_stats  # noqa: E402
 
-BATCH_BYTES = 250_000
+BATCH_BYTES = 100_000
+# Event logs are read for this many times --top threads, so failed commands
+# can reorder the top of the ranking without reading every thread's log.
+POOL_FACTOR = 2
 
 
 def bb(*args):
@@ -34,9 +45,27 @@ def bb(*args):
     ).stdout
 
 
+def tokenomics_line(entry):
+    """One line of the thread's tokenomics numbers, for the top of .tools.txt."""
+    s = signals(entry)
+    parts = [
+        f"{human(s['tokens'])} tokens",
+        f"{s['turns']} turns",
+        f"{(entry.get('subagents') or {}).get('count') or 0} subagents ({human(s['subagent_tokens'])} tokens)",
+    ]
+    if s["context_peak"]:
+        parts.append(f"peak context {human(s['context_peak'])}")
+    if s["turn_p90"]:
+        parts.append(f"turn p90 {duration(s['turn_p90'])}, longest {duration(s['turn_longest'])}")
+    if s["waiting"]:
+        parts.append(f"waited on the user {duration(s['waiting'])}")
+    return "Tokenomics: " + ", ".join(parts) + "\n"
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--days", type=int, default=7)
+    parser.add_argument("--top", type=int, default=30)
     parser.add_argument("--out")
     opts = parser.parse_args()
 
@@ -44,71 +73,110 @@ def main():
     out = opts.out or f"/tmp/self-improve-{today}"
     os.makedirs(out, exist_ok=True)
 
-    cutoff_ms = (
-        datetime.datetime.now() - datetime.timedelta(days=opts.days)
-    ).timestamp() * 1000
+    entries = json.loads(
+        bb("tokenomics", "threads", "--days", str(opts.days), "--limit", "200", "--json")
+    )
+    if len(entries) >= 200:
+        print("warning: tokenomics returned 200 threads, the most it lists; some were left out", file=sys.stderr)
+    with open(os.path.join(out, "slow-commands.json"), "w") as f:
+        f.write(bb("tokenomics", "commands", "--days", str(opts.days), "--json"))
 
-    projects = {p["id"]: p["name"] for p in json.loads(bb("project", "list", "--json"))}
-    projects.setdefault("proj_personal", "personal")
-    threads = json.loads(bb("thread", "list", "--json"))
-
-    # `bb thread list` returns a bounded window. If even its oldest thread is
-    # inside the cutoff, older threads in the range may be missing.
-    if threads and min(t["createdAt"] for t in threads) > cutoff_ms:
-        print("warning: thread list may not reach back to the cutoff", file=sys.stderr)
-
+    # Tokenomics does not report which plugin started a thread or whether it
+    # is hidden, so look those up in the thread list.
+    listed = {t["id"]: t for t in json.loads(bb("thread", "list", "--json"))}
     current = os.environ.get("BB_THREAD_ID")
-    selected = [
-        t
-        for t in threads
-        if t["updatedAt"] >= cutoff_ms
-        and t["id"] != current
-        and t.get("visibility") != "hidden"
+    entries = [
+        e
+        for e in entries
+        if e["threadId"] != current
+        and (listed.get(e["threadId"]) or {}).get("visibility") != "hidden"
     ]
+    unlisted = sum(1 for e in entries if e["threadId"] not in listed)
+    if unlisted:
+        print(f"warning: {unlisted} threads are not in `bb thread list`; their origin plugin is unknown", file=sys.stderr)
+
+    def origin(e):
+        return (listed.get(e["threadId"]) or {}).get("originPluginId")
+
+    def title(e):
+        t = listed.get(e["threadId"]) or {}
+        return (e.get("title") or t.get("title") or t.get("titleFallback") or "-").replace("\t", " ")
+
+    def ranked(scores):
+        return sorted(entries, key=lambda e: scores[e["threadId"]], reverse=True)
+
+    # First pass on tokenomics numbers alone, to pick whose logs to read.
+    first = dict(zip((e["threadId"] for e in entries), score([signals(e) for e in entries])))
+    pool = select([(e["threadId"], origin(e)) for e in ranked(first)], opts.top * POOL_FACTOR)
+
+    stats = {}
+    for e in entries:
+        if e["threadId"] in pool:
+            stats[e["threadId"]] = thread_stats(json.loads(bb("thread", "log", e["threadId"], "--json", "--all")))
+
+    # Second pass adds failed commands for the threads whose logs were read.
+    final = dict(
+        zip(
+            (e["threadId"] for e in entries),
+            score([signals(e, stats.get(e["threadId"], {}).get("counts", {}).get("failed")) for e in entries]),
+        )
+    )
+    order = ranked(final)
+    chosen = select([(e["threadId"], origin(e)) for e in order], opts.top)
 
     rows = []
-    per_thread = []
-    for t in selected:
-        log = bb("thread", "log", t["id"], "--format", "minimal", "--all")
-        with open(os.path.join(out, f"{t['id']}.txt"), "w") as f:
-            f.write(log)
-        title = (t.get("title") or t.get("titleFallback") or "-").replace("\t", " ")
-        stats = thread_stats(json.loads(bb("thread", "log", t["id"], "--json", "--all")))
-        with open(os.path.join(out, f"{t['id']}.tools.txt"), "w") as f:
-            f.write(digest(stats))
-        per_thread.append((t["id"], title, stats))
-        counts = stats["counts"]
-        rows.append(
-            [
-                t["id"],
-                projects.get(t["projectId"], t["projectId"]),
-                t.get("originPluginId") or "-",
-                str(log.count("── User ")),
-                str(len(log)),
-                title,
-                str(counts["commands"] + counts["reads"] + counts["edits"] + counts["tools"]),
-                str(stats["tokens"]["total"]),
-            ]
-        )
+    for e in order:
+        thread_id = e["threadId"]
+        s = stats.get(thread_id)
+        row = {
+            "selected": "yes" if thread_id in chosen else "no",
+            "batch": "-",
+            "id": thread_id,
+            "project": e.get("project") or "-",
+            "origin": origin(e) or "-",
+            "turns": str(e.get("turns") or 0),
+            "user_turns": "-",
+            "bytes": "-",
+            "title": title(e),
+            "tool_calls": "-",
+            "failed": "-",
+            "tokens": str(signals(e)["tokens"]),
+            "score": str(final[thread_id]),
+        }
+        if s:
+            n = s["counts"]
+            row["tool_calls"] = str(n["commands"] + n["reads"] + n["edits"] + n["tools"])
+            row["failed"] = str(n["failed"])
+        if thread_id in chosen:
+            log = bb("thread", "log", thread_id, "--format", "minimal", "--all")
+            text = trim(log, flagged_commands(s))
+            with open(os.path.join(out, f"{thread_id}.txt"), "w") as f:
+                f.write(text)
+            with open(os.path.join(out, f"{thread_id}.tools.txt"), "w") as f:
+                f.write(tokenomics_line(e) + digest(s))
+            row["user_turns"] = str(log.count("── User "))
+            row["bytes"] = str(len(text))
+        rows.append(row)
 
     # Keep a project's threads together so a reviewer can spot repeats.
-    rows.sort(key=lambda r: (r[1], r[0]))
-    batch, batch_bytes = 1, 0
-    for row in rows:
-        if batch_bytes and batch_bytes + int(row[4]) > BATCH_BYTES:
-            batch, batch_bytes = batch + 1, 0
-        batch_bytes += int(row[4])
-        row.insert(0, str(batch))
+    picked = sorted((r for r in rows if r["selected"] == "yes"), key=lambda r: (r["project"], r["id"]))
+    batches = pack([(r["id"], int(r["bytes"])) for r in picked], BATCH_BYTES)
+    for row in picked:
+        row["batch"] = str(batches[row["id"]])
+    picked.sort(key=lambda r: (int(r["batch"]), r["project"], r["id"]))
+    batch = max(batches.values(), default=0)
 
+    columns = list(rows[0]) if rows else ["selected", "batch", "id"]
     with open(os.path.join(out, "index.tsv"), "w") as f:
-        f.write("batch\tid\tproject\torigin\tuser_turns\tbytes\ttitle\ttool_calls\ttokens\n")
-        for row in rows:
-            f.write("\t".join(row) + "\n")
+        f.write("\t".join(columns) + "\n")
+        for row in picked + [r for r in rows if r["selected"] == "no"]:
+            f.write("\t".join(row[c] for c in columns) + "\n")
 
     with open(os.path.join(out, "tool-summary.md"), "w") as f:
-        f.write(summary(per_thread))
+        f.write(summary([(e["threadId"], title(e), stats[e["threadId"]]) for e in order if e["threadId"] in stats]))
 
-    print(f"{len(rows)} threads in {batch} batches")
+    print(f"{len(rows)} threads scored, {len(picked)} selected, in {batch} batches")
+    print(f"estimate: {batch} batch reviewers + 1 tool reviewer, about {human(estimate(batch))} tokens")
     print(out)
 
 
