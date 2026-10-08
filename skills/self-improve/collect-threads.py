@@ -16,6 +16,8 @@ Writes into DIR, and prints DIR on the last line:
   tool-summary.md        tool and token patterns across the threads whose
                          logs were read
   slow-commands.json     `bb tokenomics commands` for the same days
+  batch-<n>.md           each selected thread in batch n with its numbers,
+                         pasted into that batch's reviewer prompt
 
 Selected threads are packed into batches of about BATCH_BYTES of trimmed
 transcript so each reviewer subagent gets a similar amount to read.
@@ -154,6 +156,7 @@ def main():
                 f.write(text)
             with open(os.path.join(out, f"{thread_id}.tools.txt"), "w") as f:
                 f.write(tokenomics_line(e) + digest(s))
+            row["numbers"] = tokenomics_line(e).removeprefix("Tokenomics: ").strip()
             row["user_turns"] = str(log.count("── User "))
             row["bytes"] = str(len(text))
         rows.append(row)
@@ -166,7 +169,17 @@ def main():
     picked.sort(key=lambda r: (int(r["batch"]), r["project"], r["id"]))
     batch = max(batches.values(), default=0)
 
-    columns = list(rows[0]) if rows else ["selected", "batch", "id"]
+    for n in range(1, batch + 1):
+        with open(os.path.join(out, f"batch-{n}.md"), "w") as f:
+            for r in picked:
+                if r["batch"] == str(n):
+                    f.write(
+                        f"- {r['id']} ({r['project']}, started by {r['origin'] if r['origin'] != '-' else 'the user'}): "
+                        f"{r['title']}\n  {r['numbers']}; {r['user_turns']} user messages, {r['tool_calls']} tool calls, "
+                        f"{r['failed']} failed commands; transcript {human(int(r['bytes']))}B\n"
+                    )
+
+    columns = [c for c in rows[0] if c != "numbers"] if rows else ["selected", "batch", "id"]
     with open(os.path.join(out, "index.tsv"), "w") as f:
         f.write("\t".join(columns) + "\n")
         for row in picked + [r for r in rows if r["selected"] == "no"]:

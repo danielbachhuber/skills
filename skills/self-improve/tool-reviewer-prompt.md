@@ -4,9 +4,17 @@ Send this to one extra subagent, alongside the batch reviewers, filling in `{{DI
 
 ---
 
-You are looking for tool-call and token patterns across recent bb agent threads, the ones no reviewer reading a single batch can see. "The user" below is the person who ran those threads.
+You are looking for tool-call and token patterns across recent bb agent threads, the ones no reviewer reading a single batch can see. The threads were picked by cost from `bb tokenomics`. "The user" below is the person who ran those threads.
 
-Start with `{{DIR}}/tool-summary.md`: the threads that used the most tokens, the commands that fail in the most threads, the most used commands, and the other tools. `{{DIR}}/index.tsv` lists every thread with its tool-call and token totals, and `{{DIR}}/<thread-id>.tools.txt` has each thread's detail. For any pattern you report, open the verbose log of two or three of the threads it names (`bb thread log <id> --format verbose --all`) and confirm what the calls were doing.
+Start with `{{DIR}}/tool-summary.md`: the threads that used the most tokens, the commands that fail in the most threads, the most used commands, and the other tools. `{{DIR}}/index.tsv` lists every scored thread with its tokens, tool calls, and failed commands, and `{{DIR}}/<thread-id>.tools.txt` has a selected thread's detail. Slow commands are handled separately, so leave them out.
+
+For any pattern you report, check one thread it names, and only the calls the pattern is about. Never read a full verbose log: it re-sends every call and output in the thread. Filter the JSON log to the named calls instead, for example the `gh pr` commands that failed:
+
+```bash
+bb thread log <id> --json --all | jq -r '.[] | select(.type == "item/completed") | .data.item | select(.type == "commandExecution" and .exitCode != 0 and (.command | test("gh pr"))) | "\(.exitCode) \(.command)\n\((.aggregatedOutput // "")[:300])"'
+```
+
+Change the `select` to match the pattern: `.type == "toolCall" and .tool == "ToolSearch"` for a tool, `.type == "fileRead"` and `.path` for a reread file.
 
 Do not spawn threads, message threads, or change files.
 
@@ -18,6 +26,6 @@ Look for:
 - **Threads that ran long without delegating.** The summary counts subagents per thread and flags big threads that started none. High peak context with many turns means every turn re-reads everything. Check whether the work could have gone to subagents or been split into threads.
 - **Tools that churn.** Repeated `ToolSearch`, loading the same skill several times in a thread, or an MCP tool that keeps failing.
 
-Find where each fix belongs the same way the batch reviewers do: `ls -la ~/.claude/skills`, `readlink -f ~/.claude/CLAUDE.md`, `bb plugin list`, and `bb project list`. Open the file and confirm the problem is still there before reporting it.
+Find where each fix belongs the same way the batch reviewers do, in one shell command: `ls -la ~/.claude/skills`, `readlink -f ~/.claude/CLAUDE.md`, `bb plugin list`, and `bb project list`. Confirm the problem is still in each target file with one shell command of `grep -n` calls before reporting it.
 
-Report at most 8 findings. Your final message is the report, using the finding shape in `reviewer-prompt.md` with `Signal: tool and token cost`. `Cost` gives the numbers: calls, failures, threads, tokens. Evidence quotes a command line or its output, with `System` as the speaker.
+Stop after 20 tool calls. Report at most 5 findings, in under 600 words. Your final message is the report, using the finding shape in `reviewer-prompt.md` with `Signal: tool and token cost`. `Cost` gives the numbers: calls, failures, threads, tokens. Evidence quotes a command line or its output, with `System` as the speaker.

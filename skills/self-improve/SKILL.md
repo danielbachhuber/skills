@@ -21,7 +21,7 @@ Run this skill in a fresh thread. Started in a thread already holding work, ever
 
    The script prints an estimate of what the reviewers will cost. State it. If it is over 20M tokens, ask whether to go ahead or rerun with a lower `--top`, and wait for the answer.
 
-2. **Review in parallel.** In one message, dispatch one subagent per batch with the prompt in `reviewer-prompt.md` (fill in the directory and batch number), plus one more with `tool-reviewer-prompt.md` (fill in the directory), which looks for tool and token patterns across the selected threads. Keep the transcripts out of your own context. Subagents may not be allowed to write files, so save each returned report yourself as `report-<batch>.md` or `report-tools.md` in the output directory.
+2. **Review in parallel.** In one message, dispatch one subagent per batch with the prompt in `reviewer-prompt.md` (fill in the directory and batch number, and paste in `batch-<n>.md`), plus one more with `tool-reviewer-prompt.md` (fill in the directory), which looks for tool and token patterns across the selected threads. Keep the transcripts out of your own context. Subagents may not be allowed to write files, so save each returned report yourself as `report-<batch>.md` or `report-tools.md` in the output directory.
 
    If a reviewer reports that it hit its tool-call limit, do not send another reviewer to finish its batch. List the threads it did not get to under `observations` in `findings.json`, as one entry saying they were skipped.
 
