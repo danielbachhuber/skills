@@ -54,6 +54,34 @@ def signals(entry, failed=None):
     }
 
 
+def entry_from_stats(thread, project, stats):
+    """A `bb tokenomics threads` entry built from a thread's event log, for
+    when the Tokenomics plugin is not installed.
+
+    The log has no subagent tokens, turn times, or time waiting on the user,
+    so those are null and score 0, as they do for threads older than
+    Tokenomics' records.
+    """
+    return {
+        "threadId": thread["id"],
+        "title": thread.get("title") or thread.get("titleFallback"),
+        "project": project,
+        "archived": bool(thread.get("archivedAt")),
+        "turns": stats["turns"],
+        "tokens": {
+            "input": stats["tokens"]["input"],
+            "cacheRead": stats["tokens"]["cached"],
+            "output": stats["tokens"]["output"],
+            "total": stats["tokens"]["total"],
+        },
+        "subagents": {"count": stats["counts"]["delegations"], "tokens": None},
+        "context": {"peak": stats["context"]["peak"] or None, "latest": None},
+        "turnTime": None,
+        "waitingOnYou": None,
+        "slowestCommands": [],
+    }
+
+
 def _ranks(values):
     """Each value's percentile rank, 0 to 1, with ties sharing a rank. Zero ranks 0."""
     ordered = sorted(values)

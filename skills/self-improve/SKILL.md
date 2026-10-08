@@ -17,7 +17,7 @@ Run this skill in a fresh thread. Started in a thread already holding work, ever
    ```bash
    python3 ~/.claude/skills/self-improve/collect-threads.py --days 7
    ```
-   Use the number of days the user or the prompt gives, at most 30. The script scores each thread from `bb tokenomics threads` and selects the top 30 (`--top` to change), at most 2 per plugin so routine sweeps do not crowd the list. The last line is the output directory. `index.tsv` there lists every scored thread; rows with `selected` set to `yes` have a batch number and are the only ones reviewed. Each selected thread has a trimmed transcript (`<id>.txt`) and a digest of its tokenomics numbers, tokens, and tool calls (`<id>.tools.txt`). `tool-summary.md` has tool patterns across the threads whose logs were read, and `slow-commands.json` is `bb tokenomics commands` for the same days. Mention any warning the script prints.
+   Use the number of days the user or the prompt gives, at most 30. The script scores each thread from `bb tokenomics threads` when the Tokenomics plugin is installed, or from every thread's event log when it is not (slower, and without turn times or subagent tokens), and selects the top 30 (`--top` to change), at most 2 per plugin so routine sweeps do not crowd the list. The last line is the output directory. `index.tsv` there lists every scored thread; rows with `selected` set to `yes` have a batch number and are the only ones reviewed. Each selected thread has a trimmed transcript (`<id>.txt`) and a digest of its scoring numbers, tokens, and tool calls (`<id>.tools.txt`). `tool-summary.md` has tool patterns across the threads whose logs were read, and `slow-commands.json`, written only with Tokenomics, is `bb tokenomics commands` for the same days. Mention any warning the script prints.
 
    The script prints an estimate of what the reviewers will cost. State it. If it is over 20M tokens, ask whether to go ahead or rerun with a lower `--top`, and wait for the answer.
 
@@ -25,7 +25,7 @@ Run this skill in a fresh thread. Started in a thread already holding work, ever
 
    If a reviewer reports that it hit its tool-call limit, do not send another reviewer to finish its batch. List the threads it did not get to under `observations` in `findings.json`, as one entry saying they were skipped.
 
-   Slow commands do not need a reviewer. Read `slow-commands.json` yourself: it lists each kind of shell command with its runs, total, median, and longest time. A command whose median is minutes, or that adds up to hours across many runs, is a `tool and token cost` finding when you can name a faster command or a fix to the script it runs. To find the threads that ran it:
+   When `slow-commands.json` exists, slow commands do not need a reviewer; without it, the tool reviewer looks for them. Read `slow-commands.json` yourself: it lists each kind of shell command with its runs, total, median, and longest time. A command whose median is minutes, or that adds up to hours across many runs, is a `tool and token cost` finding when you can name a faster command or a fix to the script it runs. To find the threads that ran it:
    ```bash
    bb tokenomics threads --days <days> --limit 200 --json | jq -r '.[] | select(any(.slowestCommands[]?; .command == "<command>")) | .threadId'
    ```

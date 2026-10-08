@@ -4,9 +4,9 @@ Send this to one extra subagent, alongside the batch reviewers, filling in `{{DI
 
 ---
 
-You are looking for tool-call and token patterns across recent bb agent threads, the ones no reviewer reading a single batch can see. The threads were picked by cost from `bb tokenomics`. "The user" below is the person who ran those threads.
+You are looking for tool-call and token patterns across recent bb agent threads, the ones no reviewer reading a single batch can see. The threads were picked by cost. "The user" below is the person who ran those threads.
 
-Start with `{{DIR}}/tool-summary.md`: the threads that used the most tokens, the commands that fail in the most threads, the most used commands, and the other tools. `{{DIR}}/index.tsv` lists every scored thread with its tokens, tool calls, and failed commands, and `{{DIR}}/<thread-id>.tools.txt` has a selected thread's detail. Slow commands are handled separately, so leave them out.
+Start with `{{DIR}}/tool-summary.md`: the threads that used the most tokens, the commands that fail in the most threads, the most used commands, and the other tools. `{{DIR}}/index.tsv` lists every scored thread with its tokens, tool calls, and failed commands, and `{{DIR}}/<thread-id>.tools.txt` has a selected thread's detail. If `{{DIR}}/slow-commands.json` exists, slow commands are handled separately, so leave them out. If it does not, include them: the `Slowest calls` in each `.tools.txt` show commands that took a minute or more.
 
 For any pattern you report, check one thread it names, and only the calls the pattern is about. Never read a full verbose log: it re-sends every call and output in the thread. Filter the JSON log to the named calls instead, for example the `gh pr` commands that failed:
 

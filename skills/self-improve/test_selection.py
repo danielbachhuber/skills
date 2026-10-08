@@ -1,6 +1,6 @@
 import unittest
 
-from selection import estimate, flagged_commands, pack, score, select, signals, trim
+from selection import entry_from_stats, estimate, flagged_commands, pack, score, select, signals, trim
 from tool_stats import thread_stats
 
 
@@ -51,6 +51,22 @@ class SignalsTest(unittest.TestCase):
         s = signals({"threadId": "thr_x", "tokens": None, "context": None})
         self.assertEqual(s["tokens"], 0)
         self.assertEqual(s["context_peak"], 0)
+
+
+class EntryFromStatsTest(unittest.TestCase):
+    def test_builds_an_entry_tokenomics_would_have_given(self):
+        events = [
+            {"type": "turn/completed", "createdAt": 1},
+            {"type": "item/completed", "createdAt": 2, "data": {"item": {"type": "commandExecution", "id": "c1", "command": "npm test", "exitCode": 1}}},
+            {"type": "thread/tokenUsage/updated", "createdAt": 3, "data": {"tokenUsage": {"total": {"totalTokens": 4_000_000}}}},
+            {"type": "thread/contextWindowUsage/updated", "createdAt": 3, "data": {"contextWindowUsage": {"usedTokens": 120_000}}},
+        ]
+        thread = {"id": "thr_made_up", "title": None, "titleFallback": "Fix the widget", "archivedAt": None}
+        e = entry_from_stats(thread, "example", thread_stats(events))
+        self.assertEqual(e["title"], "Fix the widget")
+        s = signals(e, failed=1)
+        self.assertEqual((s["tokens"], s["turns"], s["context_peak"], s["failed"]), (4_000_000, 1, 120_000, 1))
+        self.assertEqual((s["turn_p90"], s["waiting"], s["subagent_tokens"]), (0, 0, 0))
 
 
 class ScoreTest(unittest.TestCase):

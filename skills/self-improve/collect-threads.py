@@ -5,17 +5,19 @@ Usage: python3 collect-threads.py [--days 7] [--top 30] [--out DIR]
 
 Scores every thread `bb tokenomics threads` reports, reads the event logs of
 the best-scoring ones to add their failed commands, and selects the top N.
+Without the Tokenomics plugin, it reads every thread's event log to score it.
 Writes into DIR, and prints DIR on the last line:
   index.tsv              every scored thread: selected, batch, id, project,
                          origin plugin, turns, user turns, bytes, title,
                          tool calls, failed commands, tokens, score
   <thread-id>.txt        a selected thread's trimmed transcript
                          (see selection.trim)
-  <thread-id>.tools.txt  its tokenomics numbers, token usage, and tool calls
+  <thread-id>.tools.txt  its scoring numbers, token usage, and tool calls
                          (see tool_stats.py)
   tool-summary.md        tool and token patterns across the threads whose
                          logs were read
-  slow-commands.json     `bb tokenomics commands` for the same days
+  slow-commands.json     `bb tokenomics commands` for the same days, when
+                         the Tokenomics plugin is installed
   batch-<n>.md           each selected thread in batch n with its numbers,
                          pasted into that batch's reviewer prompt
 
@@ -32,7 +34,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from selection import estimate, flagged_commands, pack, score, select, signals, trim  # noqa: E402
+from selection import entry_from_stats, estimate, flagged_commands, pack, score, select, signals, trim  # noqa: E402
 from tool_stats import digest, duration, human, summary, thread_stats  # noqa: E402
 
 BATCH_BYTES = 100_000
@@ -47,13 +49,14 @@ def bb(*args):
     ).stdout
 
 
-def tokenomics_line(entry):
-    """One line of the thread's tokenomics numbers, for the top of .tools.txt."""
+def numbers_line(entry):
+    """One line of the thread's scoring numbers, for the top of .tools.txt."""
     s = signals(entry)
     parts = [
         f"{human(s['tokens'])} tokens",
         f"{s['turns']} turns",
-        f"{(entry.get('subagents') or {}).get('count') or 0} subagents ({human(s['subagent_tokens'])} tokens)",
+        f"{(entry.get('subagents') or {}).get('count') or 0} subagents"
+        + (f" ({human(s['subagent_tokens'])} tokens)" if (entry.get("subagents") or {}).get("tokens") is not None else ""),
     ]
     if s["context_peak"]:
         parts.append(f"peak context {human(s['context_peak'])}")
@@ -61,7 +64,34 @@ def tokenomics_line(entry):
         parts.append(f"turn p90 {duration(s['turn_p90'])}, longest {duration(s['turn_longest'])}")
     if s["waiting"]:
         parts.append(f"waited on the user {duration(s['waiting'])}")
-    return "Tokenomics: " + ", ".join(parts) + "\n"
+    return "Numbers: " + ", ".join(parts) + "\n"
+
+
+def tokenomics_available():
+    return subprocess.run(["bb", "tokenomics", "help"], capture_output=True).returncode == 0
+
+
+def entries_from_logs(listed, days):
+    """Tokenomics-shaped entries, and their stats, from every thread updated
+    in the last `days`, for when the Tokenomics plugin is not installed."""
+    cutoff_ms = (datetime.datetime.now() - datetime.timedelta(days=days)).timestamp() * 1000
+    # `bb thread list` returns a bounded window. If even its oldest thread is
+    # inside the cutoff, older threads in the range may be missing.
+    if listed and min(t["createdAt"] for t in listed.values()) > cutoff_ms:
+        print("warning: thread list may not reach back to the cutoff", file=sys.stderr)
+    projects = {p["id"]: p["name"] for p in json.loads(bb("project", "list", "--json"))}
+    projects.setdefault("proj_personal", "personal")
+    entries, stats = [], {}
+    for t in listed.values():
+        if (
+            t["updatedAt"] < cutoff_ms
+            or t["id"] == os.environ.get("BB_THREAD_ID")
+            or t.get("visibility") == "hidden"
+        ):
+            continue
+        stats[t["id"]] = thread_stats(json.loads(bb("thread", "log", t["id"], "--json", "--all")))
+        entries.append(entry_from_stats(t, projects.get(t["projectId"], t["projectId"]), stats[t["id"]]))
+    return entries, stats
 
 
 def main():
@@ -75,17 +105,26 @@ def main():
     out = opts.out or f"/tmp/self-improve-{today}"
     os.makedirs(out, exist_ok=True)
 
-    entries = json.loads(
-        bb("tokenomics", "threads", "--days", str(opts.days), "--limit", "200", "--json")
-    )
-    if len(entries) >= 200:
-        print("warning: tokenomics returned 200 threads, the most it lists; some were left out", file=sys.stderr)
-    with open(os.path.join(out, "slow-commands.json"), "w") as f:
-        f.write(bb("tokenomics", "commands", "--days", str(opts.days), "--json"))
+    listed = {t["id"]: t for t in json.loads(bb("thread", "list", "--json"))}
+    stats = {}
+    if tokenomics_available():
+        entries = json.loads(
+            bb("tokenomics", "threads", "--days", str(opts.days), "--limit", "200", "--json")
+        )
+        if len(entries) >= 200:
+            print("warning: tokenomics returned 200 threads, the most it lists; some were left out", file=sys.stderr)
+        with open(os.path.join(out, "slow-commands.json"), "w") as f:
+            f.write(bb("tokenomics", "commands", "--days", str(opts.days), "--json"))
+    else:
+        print(
+            "warning: bb tokenomics is not available, so every thread's event log is read to score it,"
+            " and there is no slow-commands.json",
+            file=sys.stderr,
+        )
+        entries, stats = entries_from_logs(listed, opts.days)
 
     # Tokenomics does not report which plugin started a thread or whether it
     # is hidden, so look those up in the thread list.
-    listed = {t["id"]: t for t in json.loads(bb("thread", "list", "--json"))}
     current = os.environ.get("BB_THREAD_ID")
     entries = [
         e
@@ -113,7 +152,7 @@ def main():
 
     stats = {}
     for e in entries:
-        if e["threadId"] in pool:
+        if e["threadId"] in pool and e["threadId"] not in stats:
             stats[e["threadId"]] = thread_stats(json.loads(bb("thread", "log", e["threadId"], "--json", "--all")))
 
     # Second pass adds failed commands for the threads whose logs were read.
@@ -155,8 +194,8 @@ def main():
             with open(os.path.join(out, f"{thread_id}.txt"), "w") as f:
                 f.write(text)
             with open(os.path.join(out, f"{thread_id}.tools.txt"), "w") as f:
-                f.write(tokenomics_line(e) + digest(s))
-            row["numbers"] = tokenomics_line(e).removeprefix("Tokenomics: ").strip()
+                f.write(numbers_line(e) + digest(s))
+            row["numbers"] = numbers_line(e).removeprefix("Numbers: ").strip()
             row["user_turns"] = str(log.count("── User "))
             row["bytes"] = str(len(text))
         rows.append(row)

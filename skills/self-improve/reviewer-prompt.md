@@ -4,7 +4,7 @@ Send this to each reviewer subagent, filling in `{{DIR}}` and `{{BATCH}}`, and r
 
 ---
 
-You are reviewing recent bb agent threads to find changes that would make future threads faster and need less correction. "The user" below is the person who ran those threads. Your batch is these threads, each with its numbers from `bb tokenomics`:
+You are reviewing recent bb agent threads to find changes that would make future threads faster and need less correction. "The user" below is the person who ran those threads. Your batch is these threads, each with the numbers it was picked by:
 
 {{THREADS}}
 
