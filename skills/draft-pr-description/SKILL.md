@@ -97,6 +97,12 @@ Read `writing.md` in this skill's directory, then write the body to
 `~/projects/drafts/pull-request-<slug>.md` (`pull-request-<n>-<slug>.md` for a PR that
 already exists). Settle the title at the same time.
 
+Load the `show-dont-tell` skill too, and use the form it lists wherever a section explains
+something with a shape: a call tree in Approach for calls the change adds or moves, a gantt
+for timings, a scenario table for behavior that depends on conditions, a filmstrip for a
+change that plays out over time on screen. Render each diagram and look at it before
+showing the draft.
+
 ## 5. Fact-check before showing it
 
 Read the draft back and check it against the code, not against your memory of the session.
@@ -149,6 +155,11 @@ shows as a broken image.
 | ![before](/Users/<you>/projects/drafts/pull-request-<slug>-media/before.png) | ![after](/Users/<you>/projects/drafts/pull-request-<slug>-media/after.png) |
 | Keystrokes land in the field mid-post. | The field is locked until the post completes. |
 ```
+
+When the change plays out over time, such as a loading flash that is gone or a flow that
+now ends on the right screen, use a filmstrip from the `show-dont-tell` skill instead: one
+row of frames labeled `Before` and one labeled `After`, with a column per step so the
+frames line up.
 
 To stack several images in one cell, such as a set of variants being removed, separate
 them with `<br>` inside the cell.
@@ -297,6 +308,7 @@ questions that section draws on, write that section alone, and splice it in with
 | Fact-checked from memory | Re-run the greps behind the load-bearing claims. A confident sentence built on a stale fact is the expensive failure. |
 | Posting because the prose reads well | Fluent and wrong is the expected failure. Check every claim against its evidence. |
 | Reciting how a number was measured | Provenance is one clause, not a sentence of sample sizes and API limits. Only a correction to your own earlier analysis is banned outright. |
+| A call chain, a timing, or a set of cases explained in a paragraph | The form `show-dont-tell` lists for it, with the paragraph cut to the point it makes. |
 | Before/after media as two labelled paragraphs | A two-column `Before` / `After` table. Side by side is the layout that answers the reviewer's actual question. |
 | Bare video URL inside a table cell | It renders as a plain link. `<video src="URL" controls></video>` in the cell, then confirm with a `<video` count against `body_html`. |
 | Trusting `--attach` order to label the assets | Download each asset with the gh token and compare hashes. A swapped before/after argues the opposite of the truth. |

@@ -5,7 +5,7 @@ Follow the house style in the `## Writing` and `## GitHub Issues` sections of
 
 ## The format
 
-**No headings by default.** An issue body is prose, then optional bullets, then the
+**No headings by default.** An issue body is prose, then an optional visual and bullets, then the
 `**Done is:**` block. Most issues are short enough that a heading only breaks up two
 paragraphs. Use headings when an issue is long enough that the reader needs them to find
 their way through it.
@@ -15,9 +15,12 @@ The shape, in order:
 1. **Prose.** One to three short paragraphs. What exists now, why it matters, what is
    believed and on what basis. Lead with the thing that is wrong or unowned, not with
    background.
-2. **Bullets, only if they earn it.** Considerations, scope, or the specific unknowns.
+2. **A visual, when the prose has a shape to show.** A scenario table, a call tree, a
+   diagram, or screenshots, following the `show-dont-tell` skill. It sits right after the
+   paragraph it supports, and that paragraph gets shorter.
+3. **Bullets, only if they earn it.** Considerations, scope, or the specific unknowns.
    Skip them when the prose already carries it.
-3. **`**Done is:**`** followed by a blank line and a short bulleted list of concrete,
+4. **`**Done is:**`** followed by a blank line and a short bulleted list of concrete,
    verifiable completion criteria.
 
 Every code reference is a link, using the SHA-pinned permalinks from `permalink.sh`, inline

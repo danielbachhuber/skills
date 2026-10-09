@@ -76,6 +76,13 @@ in fact update one.
 Read `writing.md` in this skill's directory, then write the body to
 `~/projects/drafts/issue-<slug>.md`. Settle the title at the same time.
 
+Load the `show-dont-tell` skill too. When the issue turns on something with a shape, such
+as which cases break, a call chain, or a state the screen gets stuck in, show it in the
+form that skill lists, after the prose it supports. Render each diagram and look at it
+before showing the draft. Keep screenshots in `~/projects/drafts/issue-<slug>-media/`,
+embed them by absolute path, and upload them with `--attach` on `gh issue create`, reading
+the body back afterwards the same way the `draft-pr-description` skill describes.
+
 ## 5. Fact-check before showing it
 
 ```bash
@@ -167,5 +174,6 @@ Delete the draft from `~/projects/drafts/` once the issue exists.
 | Bookkeeping as a criterion | Updating an inventory or tracking doc is a consequence, not a criterion. |
 | Paraphrasing the review comment that triggered it | Fetch it and quote the sentence. The reviewer's own words carry the intent. |
 | Fact-checked from memory | `check-links.sh` catches a permalink pointing near but not at its symbol; the "only caller" claims need an `rg`. |
+| A broken case, a call chain, or a stuck screen described in a paragraph | The form `show-dont-tell` lists for it: a scenario table, a call tree, a screenshot or filmstrip. |
 | Creating the issue before the author has read it | The author verifies issue content first, every time. |
 | Posting the file after the author edited the card | The "Create issue" message carries the edited body. Write it to the draft file, then create. |
