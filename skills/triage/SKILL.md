@@ -143,6 +143,18 @@ To rewrite the body, fetch the live body again first (the user may have edited i
 
 Delete the draft file once the comment is posted.
 
+## 9. Archive the thread
+
+When the triage is finished, archive the bb thread so it leaves the sidebar. Triage is finished when every issue in it has been acted on or skipped, and nothing is waiting on the user, such as an unanswered question or a pending yes to close a milestone. With dynamic-ui, run `bb dynamic-ui state --key triage` and confirm no item is still `[open]`. When triaging several issues, wait until the last one is settled. Do not archive after each issue.
+
+Send the final chat message first, then archive as the turn's last action:
+
+```bash
+[ -n "$BB_THREAD_ID" ] && bb thread archive --self
+```
+
+Skip this outside bb, and when the user has asked to keep the thread open.
+
 ## Showing it above the composer
 
 When `bb dynamic-ui help` succeeds, show triaged issues above the composer instead of in chat. The `dynamic-ui` skill has the file format. Publish with `bb dynamic-ui publish --file <path> --key triage`, one item per issue:
@@ -154,7 +166,7 @@ When `bb dynamic-ui help` succeeds, show triaged issues above the composer inste
 - `draft`: the full drafted comment, with `draftLabel` set to `Comment to post`. The opened item shows it once, in a box the user can edit, so do not repeat it in `summary` or `details`.
 - `actions`: a primary `message` button labelled for the recommended outcome ("Post and close"), then one for the likeliest alternative ("Post" when the alternative is keeping it open). Labels say only what the button does, with no "Instead:" prefix. Each `message` button's `text` is its instruction followed by `{draft}`, for example `Post this comment on #<n>, then close it as completed:` and `{draft}` below it. Both buttons share the one draft, and whichever is pressed sends the comment as the user left it.
 
-Pressing a button is the user's yes for that issue. When its message arrives, post the comment exactly as it appears in the message, since the user may have edited it: write it to `~/projects/drafts/reply-<n>-triage.md`, run the step 8 commands for the outcome the message names, delete the draft, and republish with the same key. Act only on the issue the message names.
+Pressing a button is the user's yes for that issue. When its message arrives, post the comment exactly as it appears in the message, since the user may have edited it: write it to `~/projects/drafts/reply-<n>-triage.md`, run the step 8 commands for the outcome the message names, delete the draft, and republish with the same key. Act only on the issue the message names. If that was the last open item, go on to step 9.
 
 ## Several issues at once
 
@@ -197,6 +209,8 @@ After the last issue, give a short summary: how many were closed, kept, moved, o
 ```bash
 gh api -X PATCH repos/<owner>/<repo>/milestones/<number> -f state=closed
 ```
+
+Archive the thread (step 9) only after the user has answered about the milestone.
 
 ## Common mistakes
 
