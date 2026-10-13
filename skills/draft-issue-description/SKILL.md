@@ -120,11 +120,11 @@ The author verifies issue content before it is created. How you show it depends 
 this thread can display:
 
 ```bash
-bb dynamic-ui help >/dev/null 2>&1 && echo available
+bb impromptu-ui help >/dev/null 2>&1 && echo available
 ```
 
-**When `bb dynamic-ui` is available**, show each draft as a card above the composer.
-Load the `dynamic-ui` skill first and build the view from the format it describes. That
+**When `bb impromptu-ui` is available**, show each draft as a card above the composer.
+Load the `impromptu-ui` skill first and build the view from the format it describes. That
 format is still changing, so do not write the view from memory or from an earlier thread.
 
 Give each issue its own card, so several issues raised by one review become one view:

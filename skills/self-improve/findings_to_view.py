@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Turn a findings.json into a dynamic-ui view.
+"""Turn a findings.json into a impromptu-ui view.
 
 Usage: python3 findings_to_view.py <findings.json> > view.json
 

@@ -35,7 +35,7 @@ Assess each open Dependabot PR for real impact on the codebase, post a concise a
 3. **Assess impact** — see checklist below. Gauge blast radius by grepping actual usage.
 
 4. **Write the assessment to a draft file first** (per global CLAUDE.md — never post to GitHub unconfirmed):
-   `~/projects/drafts/pr-<n>-<dep>-assessment.md`. Then run `bb dynamic-ui help`: if it succeeds, publish the assessment above the composer as described in "With the dynamic-ui plugin" below. This is part of writing the draft, so do it even when told to stop once the draft is written. Present it in chat, get sign-off.
+   `~/projects/drafts/pr-<n>-<dep>-assessment.md`. Then run `bb impromptu-ui help`: if it succeeds, publish the assessment above the composer as described in "With the impromptu-ui plugin" below. This is part of writing the draft, so do it even when told to stop once the draft is written. Present it in chat, get sign-off.
 
 5. **Post + approve + merge** (Dependabot PRs need an approving review to clear branch protection):
    ```bash
@@ -44,11 +44,11 @@ Assess each open Dependabot PR for real impact on the codebase, post a concise a
    gh pr merge <n> --squash --auto     # auto-merge fires when checks+review are satisfied
    ```
 
-## With the dynamic-ui plugin
+## With the impromptu-ui plugin
 
-If `bb dynamic-ui help` succeeds, show the assessment above the composer as well as in the draft file, so the user can edit it and act with one click. The `dynamic-ui` skill has the file format.
+If `bb impromptu-ui help` succeeds, show the assessment above the composer as well as in the draft file, so the user can edit it and act with one click. The `impromptu-ui` skill has the file format.
 
-After step 4, publish one item per PR with `bb dynamic-ui publish --file /tmp/dep-<n>/view.json --key dependabot`:
+After step 4, publish one item per PR with `bb impromptu-ui publish --file /tmp/dep-<n>/view.json --key dependabot`:
 
 - view `title`: `Dependabot #<n>: <package>`
 - item `id`: `pr-<n>`; `title`: `#<n> <package> <from> → <to>`; `url`: the PR, so the title links to it

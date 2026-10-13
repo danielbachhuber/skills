@@ -34,14 +34,14 @@ Run this skill in a fresh thread. Started in a thread already holding work, ever
 
 4. **Write `findings.json`** in the output directory, in the shape below.
 
-5. **Present.** Check whether the dynamic-ui plugin is available:
+5. **Present.** Check whether the impromptu-ui plugin is available:
    ```bash
-   bb dynamic-ui help >/dev/null 2>&1 && echo available
+   bb impromptu-ui help >/dev/null 2>&1 && echo available
    ```
    **If it is**, turn the findings into a view and publish it from this thread:
    ```bash
    python3 ~/.claude/skills/self-improve/findings_to_view.py <output-dir>/findings.json > <output-dir>/view.json
-   bb dynamic-ui publish --file <output-dir>/view.json --key self-improve
+   bb impromptu-ui publish --file <output-dir>/view.json --key self-improve
    ```
    Each finding becomes a card with its evidence and an **Open thread** button that starts the fix in the finding's project, titled `Improve: <title>`. In chat, say how many threads were scored and how many were read, how many findings there are, name the top five, and point to the side panel. Do not repeat the list or open threads yourself. If `publish` prints a validation error, fix `findings.json` and run both commands again.
 

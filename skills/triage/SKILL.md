@@ -109,7 +109,7 @@ Most of this has shipped. The export button is the only piece left.
 
 ## 7. Show it and wait
 
-If `bb dynamic-ui help` succeeds, publish the issue as a one-item view above the composer, as described in "Showing it above the composer" below. Then, in one message after every tool call is finished, give the user:
+If `bb impromptu-ui help` succeeds, publish the issue as a one-item view above the composer, as described in "Showing it above the composer" below. Then, in one message after every tool call is finished, give the user:
 
 - the recommended outcome and why
 - one line per ask with its status and evidence
@@ -117,7 +117,7 @@ If `bb dynamic-ui help` succeeds, publish the issue as a one-item view above the
 
 Do not repeat the draft or the commands in chat. The opened item shows the draft, and the buttons say what will run.
 
-Without dynamic-ui, give the user, in one message after every tool call is finished:
+Without impromptu-ui, give the user, in one message after every tool call is finished:
 
 - the asks with their statuses and evidence
 - the recommended outcome and why
@@ -145,7 +145,7 @@ Delete the draft file once the comment is posted.
 
 ## 9. Archive the thread
 
-When the triage is finished, archive the bb thread so it leaves the sidebar. Triage is finished when every issue in it has been acted on or skipped, and nothing is waiting on the user, such as an unanswered question or a pending yes to close a milestone. With dynamic-ui, run `bb dynamic-ui state --key triage` and confirm no item is still `[open]`. When triaging several issues, wait until the last one is settled. Do not archive after each issue.
+When the triage is finished, archive the bb thread so it leaves the sidebar. Triage is finished when every issue in it has been acted on or skipped, and nothing is waiting on the user, such as an unanswered question or a pending yes to close a milestone. With impromptu-ui, run `bb impromptu-ui state --key triage` and confirm no item is still `[open]`. When triaging several issues, wait until the last one is settled. Do not archive after each issue.
 
 Send the final chat message first, then archive as the turn's last action:
 
@@ -157,7 +157,7 @@ Skip this outside bb, and when the user has asked to keep the thread open.
 
 ## Showing it above the composer
 
-When `bb dynamic-ui help` succeeds, show triaged issues above the composer instead of in chat. The `dynamic-ui` skill has the file format. Publish with `bb dynamic-ui publish --file <path> --key triage`, one item per issue:
+When `bb impromptu-ui help` succeeds, show triaged issues above the composer instead of in chat. The `impromptu-ui` skill has the file format. Publish with `bb impromptu-ui publish --file <path> --key triage`, one item per issue:
 
 - `title`: `#<n> <issue title>`, with `url` set to the issue, so the title links to it
 - `badges`: the recommended outcome, then the issue's labels
@@ -176,9 +176,9 @@ Given a list, a label, a milestone, or "the oldest issues in this repo", triage 
 gh issue list --state open --search 'sort:updated-asc' --json number,title,createdAt,updatedAt,labels --limit 30
 ```
 
-### With the dynamic-ui plugin
+### With the impromptu-ui plugin
 
-If `bb dynamic-ui help` succeeds, show the whole batch above the composer instead of going one issue at a time in chat:
+If `bb impromptu-ui help` succeeds, show the whole batch above the composer instead of going one issue at a time in chat:
 
 1. Do steps 1 to 6 for every issue first. Post, close, label, and move nothing yet.
 2. Publish one view as described in "Showing it above the composer", one item per issue, sectioned by recommended outcome (close, keep open, move, rewrite).

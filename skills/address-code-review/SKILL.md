@@ -110,9 +110,9 @@ gh api repos/<owner>/<repo>/pulls/comments/<reply-id> \
 
 Prose replies (questions, pushback, out-of-scope) are different: write them to `~/projects/drafts/pr-<n>-review-replies.md` first, show them in chat, and post only after the user confirms. Delete the draft once posted.
 
-### Prose replies with the dynamic-ui plugin
+### Prose replies with the impromptu-ui plugin
 
-If `bb dynamic-ui help` succeeds, also publish the prose replies above the composer, so the user can read each one next to the comment it answers, edit it, and post it with one click. The `dynamic-ui` skill has the file format. Publish once every reply is drafted, with `bb dynamic-ui publish --file /tmp/pr-<n>-replies/view.json --key review-replies`, one item per comment:
+If `bb impromptu-ui help` succeeds, also publish the prose replies above the composer, so the user can read each one next to the comment it answers, edit it, and post it with one click. The `impromptu-ui` skill has the file format. Publish once every reply is drafted, with `bb impromptu-ui publish --file /tmp/pr-<n>-replies/view.json --key review-replies`, one item per comment:
 
 - view `title`: `Review replies: #<n>`
 - item `id`: `comment-<comment-id>`; `title`: `<reviewer> on <path>:<line>`, or `<reviewer>'s review` for a note in a review body; `url`: the comment's `html_url` (the review's, for a review body), which makes the title a direct link to it
