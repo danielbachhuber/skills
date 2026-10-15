@@ -1,6 +1,6 @@
 ---
 name: iterate-design
-description: Use when deciding how something should look or work in a user interface, such as a new page, section, chart, dashboard, warning, or control; a question like "how might this show up" or "how should we visualize this"; a request for mockups, design options, or more directions; or when the user has rejected a round of options with "none of these" or "give me more options".
+description: Use when deciding how something should look or work in a user interface, such as a new page, section, chart, dashboard, warning, or control; a question like "how might this show up" or "how should we visualize this"; a request for mockups, design options, or more directions; when proposing or listing suggested improvements to an existing screen, which each need a before and after screenshot; or when the user has rejected a round of options with "none of these" or "give me more options".
 ---
 
 # Iterate design
@@ -15,7 +15,7 @@ The goal is the interface that solves the user's problem and is pleasant to use,
 
 Work through the steps in order. Each one ends with something the user can correct before the next one starts.
 
-**Size the work to the change.** A change to an existing screen, such as a color, a label, or one more column, follows the existing design: do steps 2 and 5, show the change, and skip the rounds of options. A new screen, section, chart, or warning gets every step.
+**Size the work to the change.** A change to an existing screen, such as a color, a label, or one more column, follows the existing design: do steps 2 and 5, show the change, and skip the rounds of options. "Show the change" means a screenshot of the screen as it is and one with the change, taken the same way, never a description alone. When you suggest several changes at once, such as a critique of a screen, give each one its own before and after. A new screen, section, chart, or warning gets every step.
 
 ## 1. Frame the moment
 
