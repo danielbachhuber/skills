@@ -29,7 +29,7 @@ class FindingsToViewTest(unittest.TestCase):
         self.assertEqual(view["title"], "Self-improve review, 2026-01-05")
         card = view["sections"][0]["items"][0]
         self.assertEqual(card["id"], "finding-1")
-        self.assertEqual(card["title"], "1. Link drafts with absolute paths")
+        self.assertEqual(card["title"], "Link drafts with absolute paths")
         self.assertEqual([b["label"] for b in card["badges"]], ["correction overhead", "widgets", "2 threads"])
         self.assertIn("> Give me the path", card["summary"])
         [action] = card["actions"]

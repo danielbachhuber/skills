@@ -49,7 +49,7 @@ def card(position, finding):
     details += ["", "**Found in:** " + ", ".join(f"`{t}`" for t in threads)]
     return {
         "id": f"finding-{position}",
-        "title": f"{position}. {finding['title']}",
+        "title": finding["title"],
         "badges": [
             {"label": finding["signal"], "tone": TONES.get(finding["signal"], "neutral")},
             {"label": finding["project"], "tone": "neutral"},
