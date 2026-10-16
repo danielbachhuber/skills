@@ -27,6 +27,13 @@ gh pr view <n> --json title,body,isDraft,files --jq '{title, isDraft, files: [.f
 gh pr view <n> --json body --jq .body > ~/projects/drafts/pull-request-<n>-current.md
 ```
 
+When rewriting an existing PR, the body is not the only part that can go stale. Check the
+current title and every screenshot or screencast embedded in the body against what the
+branch does now. Open each image and compare it with the change. Whatever no longer
+matches gets replaced in this same pass: a new title in the draft (step 4) and recaptured
+media (step 7). Noting that the title or a screenshot is out of date and leaving it for the
+author is not enough.
+
 Then dig for the prior state, which is the part you cannot reconstruct from the diff:
 
 ```bash
@@ -95,7 +102,10 @@ carry it into the description as an uncertainty.
 
 Read `writing.md` in this skill's directory, then write the body to
 `~/projects/drafts/pull-request-<slug>.md` (`pull-request-<n>-<slug>.md` for a PR that
-already exists). Settle the title at the same time.
+already exists). Settle the title at the same time. For an existing PR, keep its title only
+if it still describes the change, and otherwise write a new one. Keep the title out of the
+body file, since `--body-file` would post it as part of the body; it goes on the card or in
+chat in step 8.
 
 Load the `show-dont-tell` skill too, and use the form it lists wherever a section explains
 something with a shape: a call tree in Approach for calls the change adds or moves, a gantt
@@ -163,6 +173,11 @@ frames line up.
 
 To stack several images in one cell, such as a set of variants being removed, separate
 them with `<br>` inside the cell.
+
+When rewriting an existing PR, recapture every embedded screenshot that step 1 found out of
+date, from the current branch, and put the new file in the media folder in place of the
+old asset URL. Keep a still-accurate screenshot as its existing
+`https://github.com/user-attachments/assets/<id>` URL rather than re-uploading it.
 
 Before showing the draft, confirm every media reference points at a file that exists:
 
@@ -272,19 +287,47 @@ the stash stack is shared across worktrees.
 
 ## 8. Show, then apply
 
-Relay the title, the body, and anything you flagged. If the testing instructions list a
-behavior that no end-to-end spec covers but one could, offer to add the spec. Then wait.
+Propose the body, the title, and the media together, as one change. For an existing PR,
+say whether the title changed and which screenshots were recaptured. If the testing
+instructions list a behavior that no end-to-end spec covers but one could, offer to add the
+spec.
 
-Editing a live PR body is a GitHub write, and it needs its own approval even when the
-description was requested. Re-fetch before applying, in case it was edited meanwhile.
+How you show it depends on what this thread can display:
 
 ```bash
-gh pr edit <n> --repo <owner>/<repo> --body-file ~/projects/drafts/pull-request-<slug>.md
+bb impromptu-ui help >/dev/null 2>&1 && echo available
+```
+
+**When `bb impromptu-ui` is available**, show the draft as one card above the composer.
+Load the `impromptu-ui` skill first and build the view from the format it describes. That
+format is still changing, so do not write the view from memory or from an earlier thread.
+
+- The card's title is the PR title. For an existing PR whose title changes, the summary
+  gives the old title too.
+- The summary links the draft file by its absolute path, so the author can open and edit
+  it, and lists anything you flagged in step 5 and any recaptured media.
+- One primary `message` button, "Apply to PR #<n>" for an existing PR or "Open PR" for a
+  new one. Its message tells this thread to re-fetch the PR's current body, compare it
+  with the `-current.md` copy from step 1, and then run the `gh` command below with the
+  title, the draft file, and an `--attach` for each new media file.
+
+Then say in chat that the draft is above the composer. Do not repeat the body in chat.
+
+**Otherwise**, relay the title, the body, and anything you flagged in chat. Then wait.
+
+Editing a live PR is a GitHub write, and it needs its own approval even when the
+description was requested. The button press is that approval. Re-fetch before applying, in
+case the author edited the PR meanwhile, and stop to ask if the body differs from the copy
+you started from. Read the draft file at apply time, since the author may have edited it.
+
+```bash
+gh pr edit <n> --repo <owner>/<repo> --title "<title>" --body-file ~/projects/drafts/pull-request-<n>-<slug>.md
 gh pr create --repo <owner>/<repo> --title "<title>" --body-file ~/projects/drafts/pull-request-<slug>.md
 ```
 
-Add `--attach` for any media (step 7), and re-read the body afterwards: an appended asset
-means the reference was not substituted and still needs splicing.
+Pass `--title` on an edit even when the title is unchanged, so body and title always go out
+together. Add `--attach` for any media (step 7), and re-read the body afterwards: an
+appended asset means the reference was not substituted and still needs splicing.
 
 Delete the draft from `~/projects/drafts/`, and its `-media/` folder if it has one, once the
 GitHub operation succeeds and the rendered body shows every image and player.
@@ -316,4 +359,5 @@ questions that section draws on, write that section alone, and splice it in with
 | Testing instructions that list CI checks | Say how to see the change work. Manual steps first, then, where the repo has end-to-end tests, what the specs cover. |
 | Naming a spec without saying what it checks | Describe the states it sets up, the actions it takes, and what it asserts, so the reviewer knows what they can skip. |
 | E2E coverage claimed from a spec's name | Read the spec, confirm it asserts the behavior, and run it. Otherwise the behavior needs a manual step. |
+| Rewriting an existing body and only noting that the title or a screenshot is stale | Write the new title and recapture the screenshot in the same pass, and apply them with the body in one `gh pr edit --title ... --body-file ...`. |
 | Cropping the screencast to the interesting region | Ship the whole window. The layout moves as the app changes state, so a frame chosen on one beat cuts the others. Trim time with `-ss` instead. |
