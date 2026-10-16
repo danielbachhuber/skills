@@ -11,6 +11,8 @@ Conflict markers are a symptom, not the job. Git marks the lines where two branc
 
 **Resolving the markers is step 4 of 8.** The work that matters is finding the collisions git could not see.
 
+**Only the merge is safe to commit.** The merge commit, or the continued rebase for a stack, holds the conflict resolution and the fixes step 5 finds in code main added. Commit and push that by default. Leave any other change uncommitted until the user approves it: review feedback you noticed while reading the PR, a rename a reviewer asked for, a cleanup, a description fix. A request to resolve conflicts, even one that says to follow the skill through its commit and push, covers the merge and nothing else.
+
 **Stacked PRs need rebases. Every other PR gets a merge.**
 
 - **Stacked PR:** the PR body or GitHub UI names a stack ("stack #N"), or `gh stack checkout <PR URL>` finds one. Always rebase it with `gh stack`, never merge the base branch in. Check this before anything else.
@@ -119,6 +121,8 @@ gh pr view <n> --json mergeable,mergeStateStatus
 
 `MERGEABLE` is the goal. `BLOCKED` alongside it just means checks or review are outstanding.
 
+Commit nothing else after the merge. If you made other changes, such as addressing review comments, leave them in the working tree, list them in your report, and wait for the user to approve them before committing.
+
 ## 8. Report the drift, do not silently fix it
 
 A merge routinely falsifies the PR description: counts go stale ("its six callers", "all 53 procedures"), and a decision the body defends may now cover code the author never saw. Say so and offer to update the body. Do not rewrite the description as part of the merge.
@@ -141,3 +145,4 @@ Same for judgment calls you made on the author's behalf: a baseline you loosened
 | Regenerating a whole baseline file | Remove the specific stale entries so the diff reads |
 | "Merge main" as the commit message | Record what collided and how each was resolved |
 | Quietly editing the PR description | Report the drift, let the author decide |
+| Committing review feedback or other work alongside the merge | Commit only the merge; leave the rest uncommitted until the user approves it |
