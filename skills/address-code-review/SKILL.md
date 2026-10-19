@@ -108,18 +108,23 @@ gh api repos/<owner>/<repo>/pulls/comments/<reply-id> \
 
 `<a class="commit-link" ...>` means it linked. A bare `<p>` with the SHA as text means it did not; `PATCH` the same endpoint with the correct SHA.
 
-Prose replies (questions, pushback, out-of-scope) are different: write them to `~/projects/drafts/pr-<n>-review-replies.md` first, show them to the user once every reply is drafted, and post only after the user confirms. Delete the draft once posted.
+Prose replies (questions, pushback, out-of-scope) are different: write them to `~/projects/drafts/pr-<n>-review-replies.md` first, show them in chat, and post only after the user confirms. Delete the draft once posted.
 
-For each prose reply, show the user:
+### Prose replies with the impromptu-ui plugin
 
-- the reviewer and where the comment is (`<reviewer> on <path>:<line>`, or `<reviewer>'s review` for a note in a review body), linked to the comment's `html_url` (the review's, for a review body)
-- what the reply does (`Pushback`, `Answer`, `Thanks`, `Out of scope`)
-- your conclusion in a few words, then the reviewer's comment quoted verbatim
-- the evidence behind the reply, with file and line references
-- the reply exactly as in the draft file, editable
-- one choice, **Post reply**, which posts it to review comment `<comment-id>` on #<n>. A note in a review body has no thread to reply in, so its choice is **Post as a PR comment**.
+If `bb impromptu-ui help` succeeds, also publish the prose replies above the composer, so the user can read each one next to the comment it answers, edit it, and post it with one click. The `impromptu-ui` skill has the file format. Publish once every reply is drafted, with `bb impromptu-ui publish --file /tmp/pr-<n>-replies/view.json --key review-replies`, one item per comment:
 
-Choosing to post is the user's yes for that reply. Post the reply exactly as the user left it, since they may have edited it, to `/comments/<comment-id>/replies`, and remove it from the draft file (delete the file once it is empty). Post only the reply the user chose.
+- view `title`: `Review replies: #<n>`
+- item `id`: `comment-<comment-id>`; `title`: `<reviewer> on <path>:<line>`, or `<reviewer>'s review` for a note in a review body; `url`: the comment's `html_url` (the review's, for a review body), which makes the title a direct link to it
+- `badges`: what the reply does (`Pushback`, `Answer`, `Thanks`, `Out of scope`)
+- `summary`: first line is your conclusion in a few words, since it is all the row above the composer shows. Then the reviewer's comment quoted verbatim.
+- `details`: the evidence behind the reply, with file and line references
+- `draft`: the reply exactly as in the draft file, with `draftLabel` set to `Reply to post`
+- `actions`: a primary `message` button, `Post reply`, with `text` `Post this reply to review comment <comment-id> on #<n>:` followed by `{draft}` on the lines below. The title already links to the comment, so no separate link button. A note in a review body has no thread to reply in, so its button says `Post as a PR comment` and its text says so.
+
+In chat, say how many replies are above the composer and link the draft file. Do not repeat the replies in chat.
+
+Pressing a button is the user's yes for that reply. When its message arrives, post the reply exactly as it appears in the message, since the user may have edited it, to `/comments/<comment-id>/replies`, remove it from the draft file (delete the file once it is empty), and republish with the same key, keeping the posted item in the view so it shows as done. Post only the reply the message names.
 
 ## Order matters
 

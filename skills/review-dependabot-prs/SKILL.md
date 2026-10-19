@@ -35,7 +35,7 @@ Assess each open Dependabot PR for real impact on the codebase, post a concise a
 3. **Assess impact** — see checklist below. Gauge blast radius by grepping actual usage.
 
 4. **Write the assessment to a draft file first** (per global CLAUDE.md — never post to GitHub unconfirmed):
-   `~/projects/drafts/pr-<n>-<dep>-assessment.md`. Then show it to the user as described in "What the user decides on" below. This is part of writing the draft, so do it even when told to stop once the draft is written. Get sign-off.
+   `~/projects/drafts/pr-<n>-<dep>-assessment.md`. Then run `bb impromptu-ui help`: if it succeeds, publish the assessment above the composer as described in "With the impromptu-ui plugin" below. This is part of writing the draft, so do it even when told to stop once the draft is written. Present it in chat, get sign-off.
 
 5. **Post + approve + merge** (Dependabot PRs need an approving review to clear branch protection):
    ```bash
@@ -44,21 +44,26 @@ Assess each open Dependabot PR for real impact on the codebase, post a concise a
    gh pr merge <n> --squash --auto     # auto-merge fires when checks+review are satisfied
    ```
 
-## What the user decides on
+## With the impromptu-ui plugin
 
-Show the user one item per PR, so they can read the assessment, edit it, and choose what happens next:
+If `bb impromptu-ui help` succeeds, show the assessment above the composer as well as in the draft file, so the user can edit it and act with one click. The `impromptu-ui` skill has the file format.
 
-- the PR number, package, and version change (`#<n> <package> <from> → <to>`), linked to the PR
-- the verdict (`Safe to merge`, `Needs a look`, or `Hold`), the scope (`dev-only` or `runtime`), and the semver jump (`patch`, `minor`, `major`), read from the version numbers themselves (0.16.0 → 0.17.0 is `minor`)
-- the verdict and why, then one line each for what changed, blast radius, and CI
-- anything worth checking before merging, such as a stale-base artifact in the diff or a skipped job
-- the assessment exactly as in the draft file, editable
-- the choices, in this order:
-  - **Post, approve, and merge**: post the assessment on #<n>, approve the PR, and turn on auto-merge (squash). This is the likely choice when the verdict is "safe to merge"; otherwise one of the others is.
-  - **Post only**: post the assessment on #<n> and stop there.
-  - when the PR conflicts or has a stale base, **Ask Dependabot to rebase**: `gh pr comment <n> --repo <owner>/<repo> --body "@dependabot rebase"`
+After step 4, publish one item per PR with `bb impromptu-ui publish --file /tmp/dep-<n>/view.json --key dependabot`:
 
-Choosing one is the user's yes, including for approving as them. Post the assessment exactly as the user left it, since they may have edited it: overwrite the draft file with it, run the step 5 commands for the choice, and delete the draft file.
+- view `title`: `Dependabot #<n>: <package>`
+- item `id`: `pr-<n>`; `title`: `#<n> <package> <from> → <to>`; `url`: the PR, so the title links to it
+- `badges`: the verdict first (`Safe to merge` success, `Needs a look` warning, `Hold` danger), then the scope (`dev-only` or `runtime`) and the semver jump (`patch`, `minor`, `major`), read from the version numbers themselves (0.16.0 → 0.17.0 is `minor`)
+- `summary`: first line is the verdict and why, since it is all the row above the composer shows. Then one line each for what changed, blast radius, and CI.
+- `details`: anything worth checking before merging, such as a stale-base artifact in the diff or a skipped job
+- `draft`: the assessment exactly as in the draft file, with `draftLabel` set to `Assessment to post`. Do not repeat it in `summary` or `details`.
+- `actions`, in this order:
+  - a primary `message` button, `Post, approve, and merge`, with `text` `Post this assessment on #<n>, approve the PR, and turn on auto-merge (squash):` followed by `{draft}` on the lines below. Mark a different button primary when the verdict is not "safe to merge".
+  - a `message` button, `Post only`, with `text` `Post this assessment on #<n> and stop there:` followed by `{draft}`
+  - when the PR conflicts or has a stale base, a `command` button, `Ask Dependabot to rebase`, running `gh pr comment <n> --repo <owner>/<repo> --body "@dependabot rebase"`
+
+In chat, give the verdict in one sentence and point to the view above the composer, along with the draft file's link.
+
+Pressing a button is the user's yes, including for approving as them. When its message arrives, post the assessment exactly as it appears in the message, since the user may have edited it: overwrite the draft file with it, run the step 5 commands the message names, delete the draft file, and republish with the same key.
 
 ## Assessment checklist
 

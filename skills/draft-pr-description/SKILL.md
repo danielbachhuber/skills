@@ -292,20 +292,31 @@ say whether the title changed and which screenshots were recaptured. If the test
 instructions list a behavior that no end-to-end spec covers but one could, offer to add the
 spec.
 
-Show the author:
+How you show it depends on what this thread can display:
 
-- the PR title, and for an existing PR whose title changes, the old title too
-- a link to the draft file by its absolute path, so the author can open and edit it
-- anything you flagged in step 5 and any recaptured media
-- one choice, "Apply to PR #<n>" for an existing PR or "Open PR" for a new one, which
-  re-fetches the PR's current body, compares it with the `-current.md` copy from step 1,
-  and then runs the `gh` command below with the title, the draft file, and an `--attach`
-  for each new media file
+```bash
+bb impromptu-ui help >/dev/null 2>&1 && echo available
+```
 
-Then wait.
+**When `bb impromptu-ui` is available**, show the draft as one card above the composer.
+Load the `impromptu-ui` skill first and build the view from the format it describes. That
+format is still changing, so do not write the view from memory or from an earlier thread.
+
+- The card's title is the PR title. For an existing PR whose title changes, the summary
+  gives the old title too.
+- The summary links the draft file by its absolute path, so the author can open and edit
+  it, and lists anything you flagged in step 5 and any recaptured media.
+- One primary `message` button, "Apply to PR #<n>" for an existing PR or "Open PR" for a
+  new one. Its message tells this thread to re-fetch the PR's current body, compare it
+  with the `-current.md` copy from step 1, and then run the `gh` command below with the
+  title, the draft file, and an `--attach` for each new media file.
+
+Then say in chat that the draft is above the composer. Do not repeat the body in chat.
+
+**Otherwise**, relay the title, the body, and anything you flagged in chat. Then wait.
 
 Editing a live PR is a GitHub write, and it needs its own approval even when the
-description was requested. Choosing "Apply to PR #<n>" or "Open PR" is that approval. Re-fetch before applying, in
+description was requested. The button press is that approval. Re-fetch before applying, in
 case the author edited the PR meanwhile, and stop to ask if the body differs from the copy
 you started from. Read the draft file at apply time, since the author may have edited it.
 

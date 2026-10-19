@@ -116,22 +116,36 @@ Then check the body against the code, not against your memory of the session.
 
 ## 6. Show, then create
 
-The author verifies issue content before it is created. Show each draft on its own, so
-several issues raised by one review can be read and created one at a time:
+The author verifies issue content before it is created. How you show it depends on what
+this thread can display:
 
-- the issue title, the repository, and the issue type
-- what the issue asks, in one line, then anything you flagged in step 5
-- the issue body, editable, so the author can change it in place
-- the criteria
-- one choice, "Create issue", which creates it in that repository with that title and
-  type, with the body as the author left it
+```bash
+bb impromptu-ui help >/dev/null 2>&1 && echo available
+```
 
-Then wait. The author changes the title or asks for a rewrite, and a revised draft is shown
-in its place.
+**When `bb impromptu-ui` is available**, show each draft as a card above the composer.
+Load the `impromptu-ui` skill first and build the view from the format it describes. That
+format is still changing, so do not write the view from memory or from an earlier thread.
 
-When the author chooses "Create issue", the body as they left it is the one to post, since
-they may have edited it. Write it to `~/projects/drafts/issue-<slug>.md` before creating
+Give each issue its own card, so several issues raised by one review become one view:
+
+- The card's title is the issue title. Its badges name the repository and the issue type.
+- The first line of its summary says what the issue asks, and anything you flagged in
+  step 5 follows it.
+- The issue body is the card's editable draft, so the author can change it in place.
+- One primary button, "Create issue", sends this thread a message naming the repository,
+  the title, and the issue type, with the body as the author left it.
+
+Then say in chat how many drafts there are and that they are above the composer. Do not
+repeat the body in chat. The author changes the title or asks for a rewrite in chat, and a
+revised draft goes out as a new card.
+
+When a "Create issue" message arrives, the body in it is the one to post, since the author
+may have edited the card. Write it to `~/projects/drafts/issue-<slug>.md` before creating
 the issue.
+
+**Otherwise**, relay the title, the body, the criteria, and anything you flagged in chat.
+Then wait.
 
 ```bash
 gh issue create --repo <owner>/<repo> --title "<title>" --body-file ~/projects/drafts/issue-<slug>.md
@@ -162,4 +176,4 @@ Delete the draft from `~/projects/drafts/` once the issue exists.
 | Fact-checked from memory | `check-links.sh` catches a permalink pointing near but not at its symbol; the "only caller" claims need an `rg`. |
 | A broken case, a call chain, or a stuck screen described in a paragraph | The form `show-dont-tell` lists for it: a scenario table, a call tree, a screenshot or filmstrip. |
 | Creating the issue before the author has read it | The author verifies issue content first, every time. |
-| Posting the file after the author edited the draft | Use the body as the author left it. Write it to the draft file, then create. |
+| Posting the file after the author edited the card | The "Create issue" message carries the edited body. Write it to the draft file, then create. |

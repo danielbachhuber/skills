@@ -34,14 +34,18 @@ Run this skill in a fresh thread. Started in a thread already holding work, ever
 
 4. **Write `findings.json`** in the output directory, in the shape below.
 
-5. **Present.** In a short message, say how many threads were scored and how many were read, and how many findings there are. Then show the user every finding in rank order, each with:
-   - its title, signal, project, thread count, and cost
-   - the first evidence quote with its speaker and thread ID, then any further quotes
-   - the target file and the threads it was found in
-   - its task, editable
-   - one choice, **Open thread**, which starts the fix in the finding's project, titled `Improve: <title>`
+5. **Present.** Check whether the impromptu-ui plugin is available:
+   ```bash
+   bb impromptu-ui help >/dev/null 2>&1 && echo available
+   ```
+   **If it is**, turn the findings into a view and publish it from this thread:
+   ```bash
+   python3 ~/.claude/skills/self-improve/findings_to_view.py <output-dir>/findings.json > <output-dir>/view.json
+   bb impromptu-ui publish --file <output-dir>/view.json --key self-improve
+   ```
+   Each finding becomes a card with its evidence and an **Open thread** button that starts the fix in the finding's project, titled `Improve: <title>`. In chat, say how many threads were scored and how many were read, how many findings there are, name the top five, and point to the side panel. Do not repeat the list or open threads yourself. If `publish` prints a validation error, fix `findings.json` and run both commands again.
 
-   Show the one-off observations after the findings, with their thread IDs and no choice. Open no threads until the user chooses. For each chosen finding, write its task as the user left it, followed by a `Found in:` line of `@thread:<id>` mentions, to `task-<n>.md`, then:
+   **If it is not**, write the list to `findings.md` in the output directory and show it in chat, numbered, each with title, target, thread count, cost, and one evidence quote, with the one-off observations in a short section at the end. Ask which numbers to open threads for, and wait for the answer. For each chosen finding, write its task followed by a `Found in:` line of `@thread:<id>` mentions to `task-<n>.md`, then:
    ```bash
    bb thread spawn --project <id from bb project list> --title "Improve: <title>" --prompt-file <output-dir>/task-<n>.md
    ```
