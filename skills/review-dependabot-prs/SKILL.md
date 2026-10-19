@@ -60,11 +60,13 @@ After step 4, publish one item per PR with `bb impromptu-ui publish --file /tmp/
 - `actions`, in this order:
   - a primary `message` button, `Post, approve, and merge`, with `text` `Post this assessment on #<n>, approve the PR, and turn on auto-merge (squash):` followed by `{draft}` on the lines below. Mark a different button primary when the verdict is not "safe to merge".
   - a `message` button, `Post only`, with `text` `Post this assessment on #<n> and stop there:` followed by `{draft}`
-  - always, a `command` button, `Ask Dependabot to rebase`, running `gh pr comment <n> --repo <owner>/<repo> --body "@dependabot rebase"`, so the user can refresh the branch before merging. Make it the primary button when the PR conflicts or has a stale base.
+  - always, a `message` button, `Ask Dependabot to rebase`, with `repeat: true` and `text` `Ask Dependabot to rebase #<n>, then keep the card open until the rebased commit lands`, so the user can refresh the branch before merging. Make it the primary button when the PR conflicts or has a stale base.
+
+When the rebase message arrives, record the head SHA with `gh pr view <n> --json headRefOid`, post `@dependabot rebase`, and republish the item with `status` `{ "label": "Rebase requested, waiting on Dependabot", "tone": "warning" }`. Then wait in the background for the head SHA to change, checking every 30 seconds for up to 30 minutes. When it changes, refresh the diff, CI, and assessment, and republish without the status. If it never changes, set the status to `Dependabot has not rebased yet` and leave the item open.
 
 In chat, give the verdict in one sentence and point to the view above the composer, along with the draft file's link.
 
-Pressing a button is the user's yes, including for approving as them. When its message arrives, post the assessment exactly as it appears in the message, since the user may have edited it: overwrite the draft file with it, run the step 5 commands the message names, delete the draft file, and republish with the same key.
+Pressing a button is the user's yes, including for approving as them. When a post button's message arrives, post the assessment exactly as it appears in the message, since the user may have edited it: overwrite the draft file with it, run the step 5 commands the message names, delete the draft file, and republish with the same key.
 
 ## Assessment checklist
 
