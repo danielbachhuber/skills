@@ -59,7 +59,7 @@ After step 4, publish one item per PR with `bb impromptu-ui publish --file /tmp/
 - `actions`, in this order:
   - a primary `message` button, `Post, approve, and merge`, with `text` `Post this assessment on #<n>, approve the PR, and turn on auto-merge (squash):` followed by `{draft}` on the lines below. Mark a different button primary when the verdict is not "safe to merge".
   - a `message` button, `Post only`, with `text` `Post this assessment on #<n> and stop there:` followed by `{draft}`
-  - when the PR conflicts or has a stale base, a `command` button, `Ask Dependabot to rebase`, running `gh pr comment <n> --repo <owner>/<repo> --body "@dependabot rebase"`
+  - always, a `command` button, `Ask Dependabot to rebase`, running `gh pr comment <n> --repo <owner>/<repo> --body "@dependabot rebase"`, so the user can refresh the branch before merging. Make it the primary button when the PR conflicts or has a stale base.
 
 In chat, give the verdict in one sentence and point to the view above the composer, along with the draft file's link.
 
