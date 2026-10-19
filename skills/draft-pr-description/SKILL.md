@@ -109,6 +109,12 @@ if it still describes the change, and otherwise write a new one. Keep the title 
 body file, since `--body-file` would post it as part of the body; it goes on the card or in
 chat in step 8.
 
+Every time you write this file, including a revision after feedback, publish or republish
+the step 8 card in the same turn, before you reply. Use the card, never an inline question,
+since only the card links the draft file and holds the body. Do not end a turn on "Can I
+open the PR?" in chat: the author often sends other requests first, and a question in chat
+scrolls away, while the card stays above the composer until they press it.
+
 Load the `show-dont-tell` skill too, and use the form it lists wherever a section explains
 something with a shape: a call tree in Approach for calls the change adds or moves, a gantt
 for timings, a scenario table for behavior that depends on conditions, a filmstrip for a
@@ -367,6 +373,7 @@ questions that section draws on, write that section alone, and splice it in with
 | Mistake | Fix |
 | --- | --- |
 | Description restates the diff and nothing else | The diff is the one thing a reviewer can already read. The description earns its place through the prior state, the decisions, and what was verified. |
+| Asked "open the PR?" in chat, or as an inline question | Publish the step 8 card each time the draft file is written. It links the draft and stays above the composer until the author answers. |
 | Session decisions left out | The repo is readable later; the conversation is not. An alternative you priced and rejected is lost unless the description records it. |
 | Numbers without provenance | A figure with no method and no caveat comes back as a confident claim the reviewer cannot check. |
 | Regenerating a whole body to fix one section | Splice one section. Wholesale regeneration rewrites prose the author already signed off. |
