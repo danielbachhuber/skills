@@ -55,6 +55,7 @@ After step 4, publish one item per PR with `bb impromptu-ui publish --file /tmp/
 - `badges`: the verdict first (`Safe to merge` success, `Needs a look` warning, `Hold` danger), then the scope (`dev-only` or `runtime`) and the semver jump (`patch`, `minor`, `major`), read from the version numbers themselves (0.16.0 → 0.17.0 is `minor`)
 - `summary`: first line is the verdict and why, since it is all the row above the composer shows. Then one line each for what changed, blast radius, and CI.
 - `details`: anything worth checking before merging, such as a stale-base artifact in the diff or a skipped job
+- `changes`: `[{ "patchFile": "/tmp/dep-<n>/pr.diff" }]`, written by `gh pr diff <n> > /tmp/dep-<n>/pr.diff`, with `changesLabel` set to `Files changed`. The lockfile shows as the packages whose versions moved, so keep the manifest's diff in the file too.
 - `draft`: the assessment exactly as in the draft file, with `draftLabel` set to `Assessment to post`. Do not repeat it in `summary` or `details`.
 - `actions`, in this order:
   - a primary `message` button, `Post, approve, and merge`, with `text` `Post this assessment on #<n>, approve the PR, and turn on auto-merge (squash):` followed by `{draft}` on the lines below. Mark a different button primary when the verdict is not "safe to merge".
