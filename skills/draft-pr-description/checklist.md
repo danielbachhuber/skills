@@ -61,10 +61,12 @@ List each manual step a reviewer takes to see the change work: where to go, what
 what they should see, and how to trigger anything that does not happen on its own, such as
 a notification or an error state.
 
-If the repo has end-to-end tests, list each user behavior the change affects, and for each
-one, the spec that asserts it, what that spec actually checks, and whether you ran it, or
-"no spec covers this". Note whether CI runs the suite on this PR, and why not if it does
-not.
+List each behavior the change adds or alters, and for each one, the test that checks it
+(unit, integration, or end-to-end), what that test actually asserts, and whether undoing the
+behavior made it fail, or "no test covers this". Note whether CI runs each suite on this
+PR, and why not if it does not.
+
+Note which kinds of test apply to this change and why, and which don't and why not.
 
 ## Media
 

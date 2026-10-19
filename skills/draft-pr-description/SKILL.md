@@ -41,8 +41,10 @@ git log --oneline --follow -12 -- <path>       # what built this file, with PR n
 git log --oneline -S '<removed-string>' -- <path>   # when the behaviour being changed arrived
 ```
 
-Find out whether the repo has end-to-end tests, because the testing instructions depend on
-it:
+Find out which kinds of test the repo has, unit, integration, and end-to-end, because the
+testing instructions name the tests that check each behavior and explain which kinds apply.
+The unit and integration commands are usually in `package.json` scripts or the CI config.
+For end-to-end tests:
 
 ```bash
 ls playwright.config.* cypress.config.* */playwright.config.* */cypress.config.* 2>/dev/null
@@ -50,10 +52,10 @@ ls -d e2e* */e2e* 2>/dev/null
 ls .github/workflows/ 2>/dev/null | grep -i -E 'e2e|playwright|cypress'
 ```
 
-If there is a suite, read the specs that touch what you changed, and decide whether each
-one actually asserts the new behavior. Run the ones that do, with the repo's own command.
-Also read the workflow's trigger conditions, such as draft PRs, bot authors, and path
-filters, so you know whether CI will run the suite on this PR at all.
+Then build the coverage table the way the `review-code` skill's "What the tests cover"
+section describes: one row per behavior, each matched to a test you read, ran, and saw fail
+with that behavior undone. Also read each suite's workflow trigger conditions, such as draft PRs, bot authors, and path
+filters, so you know whether CI will run each suite on this PR at all.
 
 ## 2. Choose the structure
 
@@ -126,9 +128,11 @@ Read the draft back and check it against the code, not against your memory of th
   remains, or a `See` opener on the PR that finishes it.
 - **Lost structure.** A section of the chosen structure that went missing, or an expander
   the format requires.
-- **Coverage claimed from a spec's name.** A spec counts as E2E coverage only if it asserts
-  the behavior and you ran it. Otherwise the behavior goes under what still needs a manual
-  pass.
+- **Coverage claimed from a test's name.** A test counts as coverage only if it asserts the
+  behavior and fails when you undo it. Otherwise the behavior goes under what still needs a
+  manual pass.
+- **A strategy without reasons.** Each kind of test the description names, or rules out,
+  needs a reason tied to this change.
 - **Claims you can check in under a minute.** Check them. A job name, a `needs:` edge, a
   file path, whether a downstream workflow really is scoped to one branch.
 
@@ -289,8 +293,7 @@ the stash stack is shared across worktrees.
 
 Propose the body, the title, and the media together, as one change. For an existing PR,
 say whether the title changed and which screenshots were recaptured. If the testing
-instructions list a behavior that no end-to-end spec covers but one could, offer to add the
-spec.
+instructions list a behavior that no test covers but one could, offer to add the test.
 
 How you show it depends on what this thread can display:
 
@@ -377,8 +380,10 @@ questions that section draws on, write that section alone, and splice it in with
 | Bare video URL inside a table cell | It renders as a plain link. `<video src="URL" controls></video>` in the cell, then confirm with a `<video` count against `body_html`. |
 | Trusting `--attach` order to label the assets | Download each asset with the gh token and compare hashes. A swapped before/after argues the opposite of the truth. |
 | Raising `video.size` alone to get a sharper recording | It scales down into that canvas, never up: you get the page in a corner surrounded by filler. Raise `deviceScaleFactor` *and* the viewport, and check a frame. |
-| Testing instructions that list CI checks | Say how to see the change work. Manual steps first, then, where the repo has end-to-end tests, what the specs cover. |
+| Testing instructions that list CI checks | Say how to see the change work. Manual steps first, then the coverage table, then the testing strategy. |
+| Coverage that only mentions end-to-end specs | One row per behavior, naming whichever test checks it: unit, integration, or end-to-end. |
+| A testing strategy that recites the test pyramid | Name the kinds of test that apply to this change and why, and the kinds that don't and why not. |
 | Naming a spec without saying what it checks | Describe the states it sets up, the actions it takes, and what it asserts, so the reviewer knows what they can skip. |
-| E2E coverage claimed from a spec's name | Read the spec, confirm it asserts the behavior, and run it. Otherwise the behavior needs a manual step. |
+| Coverage claimed from a test's name | Read the test, undo the behavior, and confirm the test fails. Otherwise the behavior needs a manual step. |
 | Rewriting an existing body and only noting that the title or a screenshot is stale | Write the new title and recapture the screenshot in the same pass, and apply them with the body in one `gh pr edit --title ... --body-file ...`. |
 | Cropping the screencast to the interesting region | Ship the whole window. The layout moves as the app changes state, so a frame chosen on one beat cuts the others. Trim time with `-ss` instead. |

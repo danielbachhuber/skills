@@ -99,30 +99,45 @@ line, no closing summary.
 
 ## Testing instructions
 
-The section tells a reviewer how to see the change work. Do not list the CI checks every
-PR runs, such as typecheck, lint, and unit tests. A single "CI covers it" clause is enough.
+The section tells a reviewer how to see the change work, which of its behaviors tests
+check and which they don't, and why the change is tested the way it is. Do not list the CI
+checks every PR runs, such as typecheck and lint. A single "CI covers it" clause is enough.
 
-When the repo has end-to-end tests and the change affects behavior a user can see or
-trigger, split the section in two, in this order:
+Write it in three parts, in this order:
 
 1. **Manual steps.** What a reviewer does to see the change work, one action per step.
-   Cover everything the specs do not, and flag each gap plainly rather than leaving it for
+   Cover everything the tests do not, and flag each gap plainly rather than leaving it for
    the reviewer to notice.
-2. **Covered by E2E.** The user behaviors or journeys the specs assert, each naming the
-   spec that covers it. Go into some detail on what the spec actually checks: the states
-   it sets up, the actions it takes, and what it asserts at the end. "Covered by
-   `comments.spec.ts`" alone tells the reviewer nothing about what they can skip.
+2. **What the tests cover.** The coverage table from the `review-code` skill's "What the
+   tests cover" section: one row per behavior the change adds or alters, the test that
+   checks it, and whether it is covered. Build it the same way, including undoing each
+   covered behavior to confirm its test fails. Rows can name unit, integration, or
+   end-to-end tests; say which kind each is. For a test that sets up a journey, such as
+   an end-to-end spec, say what it actually checks: the states it sets up, the actions it
+   takes, and what it asserts at the end. "Covered by `comments.spec.ts`" alone tells the
+   reviewer nothing about what they can skip. Every **No** or **Partly** row needs a
+   manual step in part 1, or a sentence on why it doesn't need one.
+3. **Testing strategy.** A short bulleted list of the kinds of test that apply to this
+   change and why, and the kinds that don't and why not. Tie each reason to the change, not
+   to testing in general:
+   - "Unit tests for `parseRange`: it's a pure function with many edge cases, and a unit
+     test runs each one in milliseconds."
+   - "No end-to-end spec: no user journey reaches the retry path without a failing server,
+     and the integration test fakes that directly."
+   - "No new tests for the copy change: nothing checks wording, and a reviewer sees it in
+     the screenshots."
 
 Use ordered lists for steps a reviewer follows in order, and bulleted lists for things that
-have no order, such as the behaviors a spec asserts.
+have no order.
 
-If no spec covers the change, the second part says so in one line. That gap is worth
-knowing about. If CI will not run the suite on this PR, because it is a draft or the
-workflow's path filters skip it, say that too.
+If no test covers the change, part 2 says so in one line. That gap is worth knowing about.
+If CI will not run a suite on this PR, because it is a draft or the workflow's path filters
+skip it, say that too.
 
-Leave end-to-end tests out entirely when no user journey can reach the change, such as
-documentation, CI configuration, or a refactor with no behavior change. Then the section is
-just the manual steps, or a command.
+For documentation, CI configuration, or a refactor with no behavior change, there are no
+behaviors to put in a table. The section is the manual steps or a command, plus one line
+on how you know behavior didn't change, such as the existing tests that pass before and
+after.
 
 Manual steps say where to go, what to do, and what the reviewer should see. For behavior
 that does not happen on its own, such as a notification, an email, or an error state, give
