@@ -302,23 +302,41 @@ bb impromptu-ui help >/dev/null 2>&1 && echo available
 Load the `impromptu-ui` skill first and build the view from the format it describes. That
 format is still changing, so do not write the view from memory or from an earlier thread.
 
-- The card's title is the PR title. For an existing PR whose title changes, the summary
-  gives the old title too.
-- The summary links the draft file by its absolute path, so the author can open and edit
-  it, and lists anything you flagged in step 5 and any recaptured media.
-- One primary `message` button, "Apply to PR #<n>" for an existing PR or "Open PR" for a
-  new one. Its message tells this thread to re-fetch the PR's current body, compare it
-  with the `-current.md` copy from step 1, and then run the `gh` command below with the
-  title, the draft file, and an `--attach` for each new media file.
+- The card's title is the PR title, and its `url` is the PR when it exists.
+- The body is the card's `draft`, with `draftLabel` set to `Description`, so the author can
+  edit it in place.
+- For an existing PR, give the card a change with `before` set to the current body from the
+  `-current.md` copy and no `after`, labelled `Description`, with `changesLabel` set to
+  `Changes against PR #<n>`. The card then shows the draft against the live body, with an
+  Edit tab for the draft. When the title changes, add a change labelled `Title` with the
+  old title as `before` and the new one as `after`.
+- The summary's first line says what the rewrite changes in a few words. Then it links the
+  draft file by its absolute path and lists anything you flagged in step 5 and any
+  recaptured media.
+- A `status` of `{ "label": "Draft", "tone": "info" }`.
+- A `note` with the placeholder `What to change in the next round`.
+- A primary `message` button, "Apply to PR #<n>" for an existing PR or "Open PR" for a
+  new one. Its text names the PR (or the branch, for a new one) and the title, followed by
+  `{draft}` on the lines below.
+- A `message` button, "Revise", whose text asks for another round on the PR's description,
+  followed by `{note}`, then `{draft}` on the lines below.
 
 Then say in chat that the draft is above the composer. Do not repeat the body in chat.
+
+When a "Revise" message arrives, start from the draft in it, since the author may have
+edited the card, and make the change the note asks for. Write the result to the draft file
+and publish the card again under the same key and `id`, with a `history` entry for the
+author's note and one for the new round.
 
 **Otherwise**, relay the title, the body, and anything you flagged in chat. Then wait.
 
 Editing a live PR is a GitHub write, and it needs its own approval even when the
 description was requested. The button press is that approval. Re-fetch before applying, in
 case the author edited the PR meanwhile, and stop to ask if the body differs from the copy
-you started from. Read the draft file at apply time, since the author may have edited it.
+you started from. The body in the button's message is the one to post, since the author may
+have edited the card. If the draft file differs from what you last published, the author
+edited it there instead: stop and ask which to use. Otherwise write the message's body to
+the draft file, then apply it.
 
 ```bash
 gh pr edit <n> --repo <owner>/<repo> --title "<title>" --body-file ~/projects/drafts/pull-request-<n>-<slug>.md
@@ -330,7 +348,10 @@ together. Add `--attach` for any media (step 7), and re-read the body afterwards
 appended asset means the reference was not substituted and still needs splicing.
 
 Delete the draft from `~/projects/drafts/`, and its `-media/` folder if it has one, once the
-GitHub operation succeeds and the rendered body shows every image and player.
+GitHub operation succeeds and the rendered body shows every image and player. With
+`bb impromptu-ui`, publish the card again with its status set to
+`{ "label": "Applied", "tone": "success", "complete": true }`, or `"Opened #<n>"` for a new
+PR, so it reads as done.
 
 ## Revising one section
 
