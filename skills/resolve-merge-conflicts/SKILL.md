@@ -23,7 +23,7 @@ For a stacked PR, pass the PR URL, not a bare number: `gh stack checkout` tries 
 1. `gh stack checkout <PR URL>` checks out every branch in the stack.
 2. `gh stack rebase` rebases the stack onto the latest base branch.
 3. Resolve conflicts with steps 3–5 below, then continue the rebase.
-4. Verify with step 6, then ask the user before `gh stack push`, which force-pushes every branch with `--force-with-lease`.
+4. Verify with step 6, then ask the user before `gh stack push`, which force-pushes every branch with `--force-with-lease`. When `bb impromptu-ui help` succeeds, ask above the composer: load the `impromptu-ui` skill and publish one question with `"layout": "inline"`, naming the stack's PRs, with "Push the stack" as the `primary` answer and "Hold for review" as the other. Do not repeat the question in chat.
 
 Steps 1, 2 and 7 below assume a merge and don't apply to a stack.
 

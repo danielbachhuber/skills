@@ -38,7 +38,7 @@ gh api repos/<owner>/<repo>/pulls/<n> --jq .stack
 
 - **`position` is 1**: only this PR merges. Continue.
 - **`position` is less than `size`**: record the PR directly above, while its base branch still exists, so step 6 can report on it: `gh pr list -R <owner>/<repo> --base <headRefName> --json number,title,url`.
-- **`position` is greater than 1**: the merge would also land the `position - 1` PRs beneath it, which you were not asked to merge. Find them by following the base branch down: `gh pr list -R <owner>/<repo> --head <baseRefName> --json number,title,url,headRefOid`, then repeat with that PR's base until you reach `stack.base.ref`. Stop and list them. Continue only if the user says to merge them too, and then run preflight and step 3 on each of them as well, since their checks and reviews are just as much a condition of the merge.
+- **`position` is greater than 1**: the merge would also land the `position - 1` PRs beneath it, which you were not asked to merge. Find them by following the base branch down: `gh pr list -R <owner>/<repo> --head <baseRefName> --json number,title,url,headRefOid`, then repeat with that PR's base until you reach `stack.base.ref`. Stop, list them, and ask whether to merge them too (see "Asking the user"). Continue only if the user says yes, and then run preflight and step 3 on each of them as well, since their checks and reviews are just as much a condition of the merge.
 
 ## 2. Pick the merge method
 
@@ -84,10 +84,10 @@ The script prints a marker, then one tab-separated line per check (`bucket`, `na
 | Marker | Do |
 |--------|----|
 | `CHECKS_PASSED` | Merge (step 5) |
-| `CHECKS_FAILED` | Do not merge. Report each failing check with its link and the relevant log lines. The script stops at the first failure, so list any checks still `pending` as pending, not passed. Ask whether to rerun, investigate a fix, or leave it. |
+| `CHECKS_FAILED` | Do not merge. Report each failing check with its link and the relevant log lines. The script stops at the first failure, so list any checks still `pending` as pending, not passed. Ask whether to rerun, investigate a fix, or leave it (see "Asking the user"). |
 | `HEAD_CHANGED` | Someone pushed. Tell the user, rerun preflight, and wait again on the new commit only if they still want the merge. |
-| `TIMED_OUT` | Report which checks are still pending. Ask whether to keep waiting. |
-| `NO_CHECKS` | The repo may have no CI for this branch. Ask before merging. |
+| `TIMED_OUT` | Report which checks are still pending. Ask whether to keep waiting (see "Asking the user"). |
+| `NO_CHECKS` | The repo may have no CI for this branch. Ask before merging (see "Asking the user"). |
 | `PR_NOT_OPEN` | Someone else merged or closed it. Report and stop. |
 
 For an Actions check, the link has the form `.../actions/runs/<run-id>/job/<job-id>`. Read the failure with:
@@ -128,7 +128,7 @@ bash ~/.claude/skills/merge-after-ci-completes/merge-async.sh <n> <owner>/<repo>
 | `ENQUEUED` | Report the PR as queued, not merged |
 | `FAILED` | GitHub could not merge. Report its `message` as-is. "Pull request head branch was modified." means the head is no longer the SHA you watched; treat it like `HEAD_CHANGED` |
 | `REJECTED` | GitHub refused the request. Report the printed body as-is |
-| `TIMED_OUT` | Still pending. Report the `uuid` and ask whether to keep waiting; check it with `gh api repos/<owner>/<repo>/pulls/<n>/merge-async/<uuid>` |
+| `TIMED_OUT` | Still pending. Report the `uuid` and ask whether to keep waiting (see "Asking the user"); check it with `gh api repos/<owner>/<repo>/pulls/<n>/merge-async/<uuid>` |
 
 Do not retry a failed or rejected merge with other options, and never pass `bypass_rules`.
 
@@ -153,6 +153,19 @@ If `BB_THREAD_ID` is set, you are running inside a bb thread. Once step 6 shows 
 ```
 
 Archive only on a confirmed merge. If the PR is queued, the checks failed, or you stopped for any other reason, leave the thread open so the user sees it. Archiving does not hide your final report; it stays readable in the thread.
+
+## Asking the user
+
+Each stop above ends on one question with a few answers. When `bb impromptu-ui help` succeeds, ask it above the composer instead of in the last line of your reply. Load the `impromptu-ui` skill for the format and publish a view with `"layout": "inline"`, one item per question, with the PR's title and number in the question. Mark the answer you recommend `primary`, and give each answer a `detail` saying what happens next.
+
+| Stop | Answers |
+|------|---------|
+| PRs beneath it in the stack | Merge them too, Stop |
+| `CHECKS_FAILED` | Rerun the failed checks, Investigate a fix, Leave it. Recommend a rerun when the log shows a flaky or infrastructure failure, and investigating when it shows a real one. |
+| `TIMED_OUT`, waiting on checks or the merge | Keep waiting, Stop |
+| `NO_CHECKS` | Merge anyway, Stop. Recommend stopping. |
+
+End your reply with the report and say the question is above the composer. Do not repeat the question or the answers in chat. Without `bb impromptu-ui`, ask in chat.
 
 ## Common mistakes
 
