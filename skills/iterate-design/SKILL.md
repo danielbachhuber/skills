@@ -146,7 +146,7 @@ Rules for the log:
 
 **Close or park, don't carry.** Don't repeat a list of open items at the end of every message. When an item has stayed open for two rounds of other work, ask once whether to do it now, park it, or drop it, and record the answer. To keep to one question per message, state a default instead of asking, such as "I'll park the flat-lines fix unless you want it now". Keep the review surface matching the log: when a design is picked, built, renamed, parked, or dropped, update or remove its open items there.
 
-End each report with a short status line for each active design: its name, its round, and what it is waiting on.
+End each report with a short status line for each active design: its name, its round, and what it is waiting on. When the round ends on a choice, such as which option to build or whether to build the picked one, ask it above the composer with the `impromptu-ui` skill when it is available, not in chat.
 
 ## 6. Check the build against the moment
 
