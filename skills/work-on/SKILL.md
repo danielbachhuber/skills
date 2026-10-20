@@ -78,11 +78,17 @@ end-to-end test that would be slow or flaky, or adding a new testing tool.
 
 ## 4. List the edge cases
 
-List the edge cases this change will meet, each with how you plan to handle it:
+List the edge cases this change will meet in a table, so the case and its handling read
+separately:
 
+```markdown
+| Edge case | How it's handled | Source |
+|-----------|------------------|--------|
+| <what happens, as a situation: "The page reloads before the vote is saved"> | <what the code does about it, and the test that covers it, if any> | <issue comment, `file:line`, or "my reasoning"> |
 ```
-- <case>: <proposed handling> (<where it came from: issue comment, file:line, your reasoning>)
-```
+
+Write the edge case as the situation only, with no handling in it. Put a case that needs the
+user's decision in the table too, with "Your call:" and the options in the handling column.
 
 Cover empty, missing, and loading data; the smallest and largest realistic values; errors
 and failures from what the code depends on; concurrency and stale data; and permissions.
