@@ -112,18 +112,13 @@ hand-back.
 
 When the user's instructions are to wait for their review before committing:
 
-1. **Super Diff.** If `bb super-diff` exists in this bb, write the Super Diff yourself:
-   run `bb super-diff guide` and follow it, passing `--target all` to `files`, `patch`, and
-   `submit`. All changes is the Diff tab's default view, so the Super Diff shows there when
-   the user opens it. Don't press Generate or ask the user to, since that only sends the
-   request back to an agent.
-2. **PR description.** If the work is going to be a pull request, use the
+1. **PR description.** If the work is going to be a pull request, use the
    `draft-pr-description` skill. The testing strategy and edge cases from steps 3 and 4
    belong in it.
-3. Stop. Don't commit, push, or open the PR until the user confirms.
+2. Stop. Don't commit, push, or open the PR until the user confirms.
 
-When the user has told you to commit and push without review, skip the Super Diff, and
-still draft the PR description before opening the PR.
+When the user has told you to commit and push without review, still draft the PR
+description before opening the PR.
 
 ## Common mistakes
 
@@ -134,4 +129,3 @@ still draft the PR description before opening the PR.
 | Putting edge cases only in test names | List them with their handling so the user can see and redirect. |
 | Waiting for approval on the test plan | Post it and keep building, unless it asks the user a real question. |
 | Building one visual design without showing options | Use `iterate-design` unless a Figma or high-fidelity design exists. |
-| Ending with "press Generate for a Super Diff" | Write the Super Diff yourself with `bb super-diff`. |
