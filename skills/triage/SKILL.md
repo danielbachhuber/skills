@@ -143,6 +143,8 @@ To rewrite the body, fetch the live body again first (the user may have edited i
 
 Delete the draft file once the comment is posted.
 
+If the user decides to solve the issue instead of only triaging it ("should we just try to solve this?"), use the `work-on` skill from here, and keep the thread open.
+
 ## 9. Archive the thread
 
 When the triage is finished, archive the bb thread so it leaves the sidebar. Triage is finished when every issue in it has been acted on or skipped, and nothing is waiting on the user, such as an unanswered question or a pending yes to close a milestone. With impromptu-ui, run `bb impromptu-ui state --key triage` and confirm no item is still `[open]`. When triaging several issues, wait until the last one is settled. Do not archive after each issue.

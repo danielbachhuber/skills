@@ -1,6 +1,6 @@
 ---
 name: work-on
-description: Use when starting work on a GitHub issue or a new piece of code, such as "work on #123", a pasted issue URL or issue text, "let's build X", or "implement this", before any code is written.
+description: Use when starting work on a GitHub issue or a new piece of code, such as "work on #123", a pasted issue URL or issue text, "let's build X", or "implement this", and when a thread that began as triage, review, or discussion turns into solving it, such as "should we just try to solve this?" or "go ahead and fix it". Use before any code is written.
 argument-hint: [issue-number-or-url-or-topic]
 ---
 
@@ -22,7 +22,14 @@ theirs to make. Everything else gets written down and the work goes on.
 
   ```bash
   gh issue view <n> --comments
-  gh issue view <n> --json body,comments,closedByPullRequestsReferences
+  gh issue view <n> --json body,comments,closedByPullRequestsReferences,assignees
+  ```
+
+- If nobody is assigned to the issue, assign it to the user. Leave an existing assignee
+  alone, even if it's someone else, and mention it in your first message.
+
+  ```bash
+  gh issue edit <n> --add-assignee @me
   ```
 
 - Read the code the change touches, and the code that calls it. Note what you find with
