@@ -120,6 +120,51 @@ When the user's instructions are to wait for their review before committing:
 When the user has told you to commit and push without review, still draft the PR
 description before opening the PR.
 
+## 7. Suggest reviewers
+
+Once the PR is open, suggest who should review it. Skip this step when the PR is a draft,
+when it already has a reviewer, or when nobody but the user reviews PRs in the repo.
+
+1. **Check for reviewers already requested.** CODEOWNERS and branch rules often request
+   them when the PR opens. Count entries rather than reading `.login`, since a team entry
+   has `.slug` instead.
+
+   ```bash
+   gh pr view <n> --json isDraft,reviewRequests --jq '{isDraft, requested: (.reviewRequests | length)}'
+   ```
+
+2. **Check that the repo has other reviewers.** List who reviewed recently merged PRs,
+   leaving out the user and bots. An empty list means a solo repo: stop here.
+
+   ```bash
+   gh pr list --state merged --limit 30 --json author,reviews --jq '
+     [.[] | .author.login as $a | .reviews[].author.login
+      | select(. != $a and (test("\\[bot\\]$|^github-actions$|^copilot"; "i") | not))]
+     | group_by(.) | map({login: .[0], reviews: length}) | sort_by(-.reviews)'
+   ```
+
+   Drop the user's own login from the result (`gh api user --jq .login`).
+
+3. **Match people to the change.** Look at who knows the code this PR touches:
+   - `EXPERTS.md` at the repo root, if it exists: match the PR's scope and changed paths
+     to a row.
+   - Recent authors of the changed files, from `git log --format='%an <%ae>' -n 20 -- <paths>`.
+   - People named in the issue or its comments as owning the area, or asked to weigh in.
+
+   Prefer someone who appears both here and in the list from step 2. A recent author who
+   never reviews is a weaker pick than an active reviewer who knows the area.
+
+4. **Suggest one reviewer, with the reason.** Add a second only when the change spans two
+   areas with different owners. Name the evidence for each pick, such as "wrote most of
+   `src/votes/` in the last month" or "the `votes` row in `EXPERTS.md`", so the user can
+   judge it. Ask before requesting the review, since it notifies the person. When
+   `bb impromptu-ui` is available, ask above the composer with the `impromptu-ui` skill,
+   one option per candidate. Once the user confirms:
+
+   ```bash
+   gh pr edit <n> --add-reviewer <login>
+   ```
+
 ## Common mistakes
 
 | Mistake | What to do instead |
@@ -129,3 +174,5 @@ description before opening the PR.
 | Putting edge cases only in test names | List them with their handling so the user can see and redirect. |
 | Waiting for approval on the test plan | Post it and keep building, unless it asks the user a real question. |
 | Building one visual design without showing options | Use `iterate-design` unless a Figma or high-fidelity design exists. |
+| Opening the PR and stopping there | Suggest a reviewer, unless the repo has nobody else reviewing. |
+| Requesting a review without asking | Name the pick and the reason, and request it once the user confirms. |
