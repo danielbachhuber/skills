@@ -7,7 +7,7 @@ argument-hint: [issue-number-or-url-or-topic]
 # Work on an issue
 
 Before writing code, work out what the change has to look like, how it will be tested,
-and where it can break. Then build it and hand it back ready for review. Most corrections
+where it can break, and how it will ship. Then build it and hand it back ready for review. Most corrections
 after an agent starts on an issue come from skipping one of these, so each one leaves
 something the user can read.
 
@@ -44,7 +44,7 @@ If the change alters what a user sees:
 
 - **A Figma link or a high-fidelity design exists:** build from it.
 - **Otherwise:** use the `iterate-design` skill, show the options, and wait for the user
-  to pick one before implementing any of them. Work out steps 3 and 4 first and post them
+  to pick one before implementing any of them. Work out steps 3 to 5 first and post them
   with the options, so the user answers everything in one stop.
 
 ## 3. Choose a testing strategy
@@ -98,9 +98,42 @@ Most cases have an obvious handling: build it, and test it where step 3 says to.
 user only about cases where the right behavior is a product decision, such as what a user
 should see, or whether to block an action.
 
-## 5. Post the plan, then build
+## 5. Decide whether it needs a rollout plan
 
-Post steps 3 and 4 in chat as one short message, with any questions for the user at the
+Most changes ship by merging: once deployed, everyone gets them, and reverting the PR
+undoes them. Those need no rollout plan. Say so in one line and move on.
+
+A change needs a rollout plan when merging and deploying is not enough, or when reverting
+would not undo it. Look for:
+
+- a database migration, backfill, or other change to stored data, especially one that
+  drops or rewrites data
+- code and schema that have to ship in a set order, such as adding a column before the
+  code that writes it, or a deploy that has to wait for another service or a mobile release
+- a breaking change to an API, event, or file format that something else reads
+- a new environment variable, secret, third-party setting, or cron job that someone sets
+  outside the code
+- a change risky enough to put behind a feature flag or release to some users first, such
+  as a change to sign-in, payments, or something many people use at once
+- caches, queued jobs, or open clients that will still hold the old shape after deploy
+
+Check what the repo already uses before inventing a process: its feature flag system, how
+migrations run, and any rollout or deploy section in the PR template.
+
+When one applies, write the plan down:
+
+```
+Rollout:    <steps in order, and who or what does each: merge, run migration, set env var, turn on flag>
+Check:      <how to tell in production that it worked: a log line, a metric, a page to load>
+Roll back:  <how to undo each step, and which steps can't be undone>
+```
+
+Ask the user only for what you can't decide or do yourself, such as who turns on the flag,
+when a migration can run, or whether a step that can't be undone is acceptable.
+
+## 6. Post the plan, then build
+
+Post steps 3, 4, and 5 in chat as one short message, with any questions for the user at the
 top. If step 2 already posted them, don't repeat them. If there are no questions, keep
 building. Don't wait for approval.
 
@@ -108,19 +141,19 @@ Build the change, run the tests, and check it in the running app when the change
 (the `run` skill covers launching it). Take screenshots of each visible state for the
 hand-back.
 
-## 6. Hand it back
+## 7. Hand it back
 
 When the user's instructions are to wait for their review before committing:
 
 1. **PR description.** If the work is going to be a pull request, use the
-   `draft-pr-description` skill. The testing strategy and edge cases from steps 3 and 4
-   belong in it.
+   `draft-pr-description` skill. The testing strategy, edge cases, and any rollout plan
+   from steps 3 to 5 belong in it.
 2. Stop. Don't commit, push, or open the PR until the user confirms.
 
 When the user has told you to commit and push without review, still draft the PR
 description before opening the PR.
 
-## 7. Suggest reviewers
+## 8. Suggest reviewers
 
 Once the PR is open, suggest who should review it. Skip this step when the PR is a draft,
 when it already has a reviewer, or when nobody but the user reviews PRs in the repo.
@@ -173,6 +206,7 @@ when it already has a reviewer, or when nobody but the user reviews PRs in the r
 | Writing unit tests by default | Say which kinds of tests fit and why, and what goes untested. |
 | Putting edge cases only in test names | List them with their handling so the user can see and redirect. |
 | Waiting for approval on the test plan | Post it and keep building, unless it asks the user a real question. |
+| Assuming merging is the whole release | Check for migrations, deploy order, settings outside the code, and anything a revert won't undo. |
 | Building one visual design without showing options | Use `iterate-design` unless a Figma or high-fidelity design exists. |
 | Opening the PR and stopping there | Suggest a reviewer, unless the repo has nobody else reviewing. |
 | Requesting a review without asking | Name the pick and the reason, and request it once the user confirms. |
