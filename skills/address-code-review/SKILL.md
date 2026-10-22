@@ -45,6 +45,8 @@ Sort the comments into three buckets:
 - **Question or discussion** — gets a prose reply, no commit.
 - **Out of scope** — offer to file an issue rather than growing the PR.
 
+When a comment can be fixed more than one way, ask which as an inline Impromptu UI question, one answer per fix with your pick as `primary`, not with a question tool or in chat.
+
 ## 4. Walk the changes, one comment at a time
 
 Do the work first, then write one message. For each code-change comment:
@@ -55,7 +57,8 @@ Do the work first, then write one message. For each code-change comment:
    - what you concluded about it
    - the full diff, inline, in a fenced `diff` block
    - the commit subject you would use
-3. Stop and wait for a yes.
+3. Ask for the yes. When `bb impromptu-ui help` succeeds, load the `impromptu-ui` skill and publish the question with `"layout": "inline"` under the key `review-fix-<comment-id>`, as the last tool call before the message. Its title is the commit subject, and its answers are "Commit" (`primary`, or "Commit and push" on the last comment) and "Change it". End the message on the diff and the commit subject, without asking in chat. Without the plugin, end the message on the question.
+4. Stop and wait.
 
 **Everything the user needs to judge the change goes in that one final message.** Two different things bury it otherwise, and both have happened:
 
@@ -143,5 +146,6 @@ Push before replying, always. A reply posted before the push names a SHA the rem
 | Prose around the SHA | Bare SHA only for a commit-addressed comment |
 | Top-level PR comment | Reply in the thread via `/comments/<id>/replies` |
 | Commit before approval | Show the diff, wait for a yes |
+| Commit question asked in chat | Publish it inline above the composer |
 | `git -C` or `cd` in a worktree session | Run git from the worktree root |
 | Fixing an out-of-scope suggestion | Offer to file an issue instead |
