@@ -66,6 +66,8 @@ Invented mockup data must reproduce this shape: the outliers, the near-empty row
 
 ## 3. Widen: first round of options
 
+Before building any options, load Claude's frontend design skill (`frontend-design:frontend-design`) if it is available, and follow it for typography, layout, and visual choices. Where the project has a design language from step 2, that language wins: use the skill to make choices the existing patterns leave open, not to restyle them.
+
 Build candidates across two axes, **where it lives** (from step 2) and **what form it takes** (from [ui-forms.md](ui-forms.md)). Read the catalog section for each job the design has to do, and consider every form there before choosing.
 
 Show **5 to 8 options** that differ in form or location, not in styling. Three tints of the same card count as one option. Each option has:
