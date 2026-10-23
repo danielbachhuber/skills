@@ -17,6 +17,8 @@ Work through the steps in order. Each one ends with something the user can corre
 
 **Size the work to the change.** A change to an existing screen, such as a color, a label, or one more column, follows the existing design: do steps 2 and 5, show the change, and skip the rounds of options. "Show the change" means a screenshot of the screen as it is and one with the change, taken the same way, never a description alone. When you suggest several changes at once, such as a critique of a screen, give each one its own before and after. A new screen, section, chart, or warning gets every step.
 
+**Show it above the composer.** When the `impromptu-ui` skill is available, load it before step 1 and use it at every point where the user reviews or decides: correcting the framing, picking an option from a round, choosing between versions, and approving a build. Put the renders there, one card per option with the current design first, so the user can pick and comment without typing a reply. Ask in chat only when the skill isn't available.
+
 ## 1. Frame the moment
 
 Before drawing anything, write back a short framing for the user to correct. Propose your own answer to each line instead of asking open questions:
@@ -37,7 +39,7 @@ The **Next** line decides the shape of the design:
 
 For **Words**, search the user's documents, README, and code for the names they already use, and pick one word per concept. A dashboard that uses the document's vocabulary supports the document. If the user has described the request as one part of a larger product or page, name the larger thing now and treat the request as its first section. Don't invent a larger umbrella the user hasn't described.
 
-Ask one question at a time when something can't be inferred. Do not move to step 2 until the user has accepted or corrected the framing. Then start the design's section in the design log (see below).
+Ask one question at a time when something can't be inferred. With Impromptu UI, show the framing as an editable draft the user can accept or correct. Do not move to step 2 until the user has accepted or corrected the framing. Then start the design's section in the design log (see below).
 
 ## 2. Ground it before drawing
 
@@ -88,7 +90,7 @@ For each option, show:
 - the typical case and the extreme cases from step 2: the outlier, the empty state, the longest list
 - a wide and a narrow layout, when the surface can be narrow
 
-Use the review surface the environment provides, such as a review panel or a page of side-by-side screenshots, so the user can pick and comment on each item. For charts, follow the dataviz skill if it is available.
+Show the round above the composer with Impromptu UI, one card per option with its renders, so the user can pick and comment on each item. Without it, use the review surface the environment provides, such as a review panel or a page of side-by-side screenshots. For charts, follow the dataviz skill if it is available.
 
 ## 5. Narrow: second round
 
@@ -148,7 +150,7 @@ Rules for the log:
 
 **Close or park, don't carry.** Don't repeat a list of open items at the end of every message. When an item has stayed open for two rounds of other work, ask once whether to do it now, park it, or drop it, and record the answer. To keep to one question per message, state a default instead of asking, such as "I'll park the flat-lines fix unless you want it now". Keep the review surface matching the log: when a design is picked, built, renamed, parked, or dropped, update or remove its open items there.
 
-End each report with a short status line for each active design: its name, its round, and what it is waiting on. When the round ends on a choice, such as which option to build or whether to build the picked one, ask it above the composer with the `impromptu-ui` skill when it is available, not in chat.
+End each report with a short status line for each active design: its name, its round, and what it is waiting on. When the round ends on a choice, such as which option to build or whether to build the picked one, ask it above the composer with Impromptu UI, not in chat.
 
 ## 6. Check the build against the moment
 
@@ -170,6 +172,7 @@ Fix what fails before reporting. In the report, show the result as images, follo
 | Inventing a new color or badge style | Use the design library, or the pattern the newest screens use |
 | Mockup data that is evenly spread and well behaved | Copy the real distribution: tails, empties, long lists, long names |
 | Describing options in a list and asking the user to pick | Render each one, current design first |
+| Asking in chat which option to build | Show the options and the question above the composer with Impromptu UI |
 | Five options that are the same layout restyled | Vary form and location; use the catalog |
 | Using a mean, or a median alone, for durations | Show median with p75 and p90, or a count past a threshold |
 | Repeating "still open" items at the end of every message | Ask once whether to do, park, or drop each one, and record it in the design log |
