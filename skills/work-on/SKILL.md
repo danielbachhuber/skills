@@ -141,19 +141,83 @@ Build the change, run the tests, and check it in the running app when the change
 (the `run` skill covers launching it). Take screenshots of each visible state for the
 hand-back.
 
-## 7. Hand it back
+## 7. Offer a review in a subthread
+
+Once the change is built and its tests pass, decide whether to offer the user a second read.
+A reviewer that starts fresh, without this thread's reasoning, catches what the author talked
+themselves past. The review is opt-in: offer it in the hand-back (step 8) and run it only
+when the user says yes. Offer it when any of these applies:
+
+- the change touches more than one module, or about 150 or more lines outside tests and
+  generated files
+- it adds new logic: branches, state, error handling, concurrency, or a new data path
+- it touches sign-in, permissions, payments, stored data, or anything step 5 gave a
+  rollout plan
+- you changed approach partway through, or worked around something you don't fully
+  understand
+
+Don't offer it for copy and docs changes, config and dependency bumps, fixture swaps, and
+small fixes in one place.
+
+When `bb impromptu-ui help` succeeds, load the `impromptu-ui` skill and ask with
+`"layout": "inline"` under the key `work-on-review`, as the last tool call of the
+hand-back. Its title is "Review this change in a subthread before you commit?", its
+`summary` is the one line that made you offer it (such as "Touches `src/votes/` and
+`src/auth/`, about 300 lines"), and its answers are "Run review" (`primary`) and "Skip
+review". Don't ask in chat as well. Without the plugin, end the hand-back on the question.
+
+If the user says yes, start the review as a child of this thread, in this thread's
+environment so it sees the uncommitted changes:
+
+```bash
+bb thread spawn --project <project id from bb status> --environment "$BB_ENVIRONMENT_ID" \
+  --parent-self --title "Review: <change>" --prompt-file - <<'EOF'
+Use the review-code skill to review the changes in this working tree against
+<merge base, such as origin/main>: committed, staged, and unstaged.
+
+The change is meant to: <one or two sentences from the issue, not from your plan>.
+Issue: <title and link, if there is one>.
+
+This is a read-only review. Another thread is working in this checkout, so don't edit,
+stage, commit, or stash anything, and don't post to GitHub. Put every finding, ranked
+most severe first, with its suggested fix, and the test coverage table in your final
+response. That response is reported back to the thread that started you.
+EOF
+```
+
+Tell the reviewer what the change is for, not how you built it or what you are worried
+about, so its read isn't shaped by yours. Then wait for it:
+
+```bash
+bb thread wait <review thread id> --timeout 30m
+```
+
+When the report arrives, check each finding against the code before acting on it:
+
+- **Real, with an obvious fix:** fix it and rerun the tests.
+- **Real, but a product decision or a tradeoff:** bring it to the user with the hand-back,
+  with the options.
+- **Wrong:** drop it, with a one-line reason.
+
+Then hand back again: update the PR description with the fixes that changed the code, and
+list the findings and what happened to each. Without `bb`, run the same prompt as a
+subagent instead.
+
+## 8. Hand it back
 
 When the user's instructions are to wait for their review before committing:
 
 1. **PR description.** If the work is going to be a pull request, use the
    `draft-pr-description` skill. The testing strategy, edge cases, and any rollout plan
-   from steps 3 to 5 belong in it.
-2. Stop. Don't commit, push, or open the PR until the user confirms.
+   from steps 3 to 5 belong in it, and so do review findings from step 7 that changed
+   the code.
+2. **Review offer.** If step 7 says to offer a review, ask as it describes.
+3. Stop. Don't commit, push, or open the PR until the user confirms.
 
 When the user has told you to commit and push without review, still draft the PR
-description before opening the PR.
+description before opening the PR. Don't stop to offer the review.
 
-## 8. Suggest reviewers
+## 9. Suggest reviewers
 
 Once the PR is open, suggest who should review it. Skip this step when the PR is a draft,
 when it already has a reviewer, or when nobody but the user reviews PRs in the repo.
@@ -208,5 +272,7 @@ when it already has a reviewer, or when nobody but the user reviews PRs in the r
 | Waiting for approval on the test plan | Post it and keep building, unless it asks the user a real question. |
 | Assuming merging is the whole release | Check for migrations, deploy order, settings outside the code, and anything a revert won't undo. |
 | Building one visual design without showing options | Use `iterate-design` unless a Figma or high-fidelity design exists. |
+| Starting a review the user didn't ask for | Offer it above the composer and run it only on a yes. |
+| Briefing the reviewer with your own doubts | Give it the goal and the diff, and let it reach its own read. |
 | Opening the PR and stopping there | Suggest a reviewer, unless the repo has nobody else reviewing. |
 | Requesting a review without asking | Name the pick and the reason, and request it once the user confirms. |
