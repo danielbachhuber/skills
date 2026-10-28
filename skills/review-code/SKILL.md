@@ -15,8 +15,8 @@ When the code under review is a GitHub pull request, also load the `review-pull-
 
 Check the change in this order. Each layer depends on the ones before it, so a problem in an earlier layer matters more than any in a later one:
 
-1. **Correct:** Does the code do what the issue, PR description, or user asked for? Does it handle edge cases? Is it tested well enough to stay correct when someone else changes it? Is it fast enough for its use?
-2. **Secure:** Does it open a vulnerability? Does it store data safely and handle personal information correctly? Could it be used for a denial of service? Does it validate input enough?
+1. **Correct:** Does the code do what the issue, PR description, or user asked for? Does it handle edge cases? Is it tested well enough to stay correct when someone else changes it? Is it fast enough for its use? Look for N+1 queries, loops or fetches with no upper bound, list endpoints without pagination, components that re-render when nothing they show changed, and large objects built inside code that runs often.
+2. **Secure:** Does it open a vulnerability? Does it store data safely and handle personal information correctly? Could it be used for a denial of service? Does it validate input enough? Look for secrets in code, logs, or config; endpoints or actions missing an auth check; SQL built by joining strings; output that isn't encoded against XSS; and data from APIs, files, or users used without validation.
 3. **Readable:** Can someone follow it and see the business rule it carries? Are names clear, tests concise, and conventions consistent with the rest of the repo?
 4. **Elegant:** Does it use well-known patterns and stay simple while doing what it needs to?
 5. **Altruist:** Does it leave the codebase better, such as by removing unused code or improving documentation in what it touches?
