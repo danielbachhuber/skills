@@ -192,7 +192,17 @@ about, so its read isn't shaped by yours. Then wait for it:
 bb thread wait <review thread id> --timeout 30m
 ```
 
-When the report arrives, check each finding against the code before acting on it:
+Once the report has arrived, archive the review thread so it leaves the sidebar. Its report
+stays readable in this thread and in the archived one:
+
+```bash
+bb thread archive <review thread id>
+```
+
+If the wait timed out or the reviewer stopped without a report, leave it open so the user
+can see what happened.
+
+Check each finding against the code before acting on it:
 
 - **Real, with an obvious fix:** fix it and rerun the tests.
 - **Real, but a product decision or a tradeoff:** bring it to the user with the hand-back,
