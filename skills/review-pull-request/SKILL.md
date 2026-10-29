@@ -50,6 +50,17 @@ For a single-line comment, drop `start` and `startSide` from the mutation call, 
 
 Start the thread with `~/.claude/scripts/start-branch-thread <PR URL> --against-pr`. Its prompt stands alone, since that thread sees nothing of this one. It names the PR (title, number, and link), states the finding and the fix in full, and asks for a PR opened with `gh pr create --base <PR head branch>`.
 
+## After approving
+
+Once an approving review is on the PR, whether the user asked you to submit it or submitted it themselves, offer the next step above the composer as an inline Impromptu UI view with two buttons:
+
+| Choice | What it does |
+|---|---|
+| **Merge and archive thread** (primary) | Merges the PR, then archives this thread. |
+| **Merge only** | Merges the PR and leaves the thread open. |
+
+**REQUIRED SUB-SKILL:** Use `merge-after-ci-completes` for either choice. It waits for every check on the PR to finish, merges, and archives the thread once the PR is merged. For **Merge only**, skip its archive step.
+
 ## Common mistakes
 
 | Mistake | Fix |
@@ -61,3 +72,5 @@ Start the thread with `~/.claude/scripts/start-branch-thread <PR URL> --against-
 | Review created with an `event`, or a second review created | Leave out `event`; add to the existing pending review |
 | Fix thread prompt that says "the finding above" | Name the PR and restate the finding in the prompt |
 | Fix PR opened against `main` | `gh pr create --base <PR head branch>` |
+| Approval reported in chat with nothing to act on next | Offer **Merge and archive thread** and **Merge only** above the composer |
+| Merged with `gh pr merge --auto` or while checks were still running | Merge through `merge-after-ci-completes` |
