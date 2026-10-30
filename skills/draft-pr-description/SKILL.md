@@ -52,9 +52,25 @@ ls -d e2e* */e2e* 2>/dev/null
 ls .github/workflows/ 2>/dev/null | grep -i -E 'e2e|playwright|cypress'
 ```
 
-Then build the coverage table the way the `review-code` skill's "What the tests cover"
-section describes: one row per behavior, each matched to a test you read, ran, and saw fail
-with that behavior undone. Also read each suite's workflow trigger conditions, such as draft PRs, bot authors, and path
+Then match each behavior the change adds or alters to a test you read, ran, and saw fail
+with that behavior undone, the way the `review-code` skill's "What the tests cover" section
+describes. Note each test's kind and what it covers in that kind's terms: the scenarios a
+unit or integration test runs, the states a component test checks, the components a visual
+test snapshots, the steps an end-to-end spec walks.
+
+Look past the tests the diff touches. Existing tests the PR doesn't edit often reach the
+changed code too, especially end-to-end specs and visual checkpoints, which never name the
+function they go through. Find the callers of each changed function, hook, or component,
+then search the specs for what those callers render, such as their labels and test IDs:
+
+```bash
+rg -l '<changedHook>' --glob '!*.test.*'                     # the components that use it
+rg -l -e '<label a caller renders>' -e '<its test ID>' <e2e dir>
+```
+
+Read each spec you find to see what it asserts along the way.
+
+Also read each suite's workflow trigger conditions, such as draft PRs, bot authors, and path
 filters, so you know whether CI will run each suite on this PR at all.
 
 ## 2. Choose the structure
@@ -135,8 +151,8 @@ Read the draft back and check it against the code, not against your memory of th
 - **Lost structure.** A section of the chosen structure that went missing, or an expander
   the format requires.
 - **Coverage claimed from a test's name.** A test counts as coverage only if it asserts the
-  behavior and fails when you undo it. Otherwise the behavior goes under what still needs a
-  manual pass.
+  behavior and fails when you undo it. Otherwise the behavior goes under "Not covered" with
+  a manual step.
 - **A strategy without reasons.** Each kind of test the description names, or rules out,
   needs a reason tied to this change.
 - **Claims you can check in under a minute.** Check them. A job name, a `needs:` edge, a
@@ -387,10 +403,12 @@ questions that section draws on, write that section alone, and splice it in with
 | Bare video URL inside a table cell | It renders as a plain link. `<video src="URL" controls></video>` in the cell, then confirm with a `<video` count against `body_html`. |
 | Trusting `--attach` order to label the assets | Download each asset with the gh token and compare hashes. A swapped before/after argues the opposite of the truth. |
 | Raising `video.size` alone to get a sharper recording | It scales down into that canvas, never up: you get the page in a corner surrounded by filler. Raise `deviceScaleFactor` *and* the viewport, and check a frame. |
-| Testing instructions that list CI checks | Say how to see the change work. Manual steps first, then the coverage table, then the testing strategy. |
-| Coverage that only mentions end-to-end specs | One row per behavior, naming whichever test checks it: unit, integration, or end-to-end. |
-| A testing strategy that recites the test pyramid | Name the kinds of test that apply to this change and why, and the kinds that don't and why not. |
-| Naming a spec without saying what it checks | Describe the states it sets up, the actions it takes, and what it asserts, so the reviewer knows what they can skip. |
+| Testing instructions that list CI checks | Say how to see the change work. **Manual testing steps:** at the top, then what the tests cover, grouped by kind of test. |
+| Coverage that only mentions end-to-end specs | A group for each kind of test the change uses (unit and integration, component, visual, end-to-end), each a table of what it checks and the test file that checks it. |
+| Behavior rows that describe a case ("sorts by name without regard to case") | Write the call and its result as a small code example: `list()` of `zeta, Alpha, beta` → `Alpha, beta, zeta`. |
+| A coverage table followed by a strategy list that repeats it | One table per kind of test, each under a one-sentence reason it fits. The "Not covered" table says which kinds were skipped and why. |
+| Reasons that recite the test pyramid | Tie each kind of test, used or skipped, to something about this change. |
+| Naming a spec without saying what it checks | List the steps it walks through and what it asserts at the end, so the reviewer knows which manual steps it already does. |
 | Coverage claimed from a test's name | Read the test, undo the behavior, and confirm the test fails. Otherwise the behavior needs a manual step. |
 | Rewriting an existing body and only noting that the title or a screenshot is stale | Write the new title and recapture the screenshot in the same pass, and apply them with the body in one `gh pr edit --title ... --body-file ...`. |
 | Cropping the screencast to the interesting region | Ship the whole window. The layout moves as the app changes state, so a frame chosen on one beat cuts the others. Trim time with `-ss` instead. |

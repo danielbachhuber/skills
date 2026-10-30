@@ -103,39 +103,118 @@ The section tells a reviewer how to see the change work, which of its behaviors 
 check and which they don't, and why the change is tested the way it is. Do not list the CI
 checks every PR runs, such as typecheck and lint. A single "CI covers it" clause is enough.
 
-Write it in three parts, in this order:
+Write it in two parts, in this order. Manual steps always come first, at the top of the
+section, even when the tests cover most of the change.
 
-1. **Manual steps.** What a reviewer does to see the change work, one action per step.
-   Cover everything the tests do not, and flag each gap plainly rather than leaving it for
-   the reviewer to notice.
-2. **What the tests cover.** The coverage table from the `review-code` skill's "What the
-   tests cover" section: one row per behavior the change adds or alters, the test that
-   checks it, and whether it is covered. Build it the same way, including undoing each
-   covered behavior to confirm its test fails. Rows can name unit, integration, or
-   end-to-end tests; say which kind each is. For a test that sets up a journey, such as
-   an end-to-end spec, say what it actually checks: the states it sets up, the actions it
-   takes, and what it asserts at the end. "Covered by `comments.spec.ts`" alone tells the
-   reviewer nothing about what they can skip. Every **No** or **Partly** row needs a
-   manual step in part 1, or a sentence on why it doesn't need one.
-3. **Testing strategy.** A short bulleted list of the kinds of test that apply to this
-   change and why, and the kinds that don't and why not. Tie each reason to the change, not
-   to testing in general:
-   - "Unit tests for `parseRange`: it's a pure function with many edge cases, and a unit
-     test runs each one in milliseconds."
-   - "No end-to-end spec: no user journey reaches the retry path without a failing server,
-     and the integration test fakes that directly."
-   - "No new tests for the copy change: nothing checks wording, and a reviewer sees it in
-     the screenshots."
+1. **Manual steps.** Start with the line `**Manual testing steps:**`, then an ordered list
+   of what a reviewer does to see the change work, one action per step. Cover everything
+   the tests do not, and flag each gap plainly rather than leaving it for the reviewer to
+   notice.
+2. **What the tests cover.** One group per kind of test the change uses, in this order:
+   unit and integration, component, visual, end-to-end. Leave out a kind the change
+   doesn't use, unless the reason it doesn't is worth stating (see "Not covered" below).
+   Each group is a bold label naming the kind, one sentence on why this kind of test fits
+   this change, and a two-column table, Behavior and Test. Keep file links out of the
+   label and the sentence; the Test column links the file, so a reviewer can see which
+   file covers which row.
 
-Use ordered lists for steps a reviewer follows in order, and bulleted lists for things that
-have no order.
+   | Kind | One Behavior row per |
+   |---|---|
+   | Unit and integration | Case the test checks, written as the call and its result in inline code, joined by an arrow: `list({ offset: 5 })` of A, B → `{ items: [], total: 2 }`. When it runs through more than the function, such as an API route, a database, or input validation, say so between them: "through the route". |
+   | Component | State the test renders or interaction it performs, and what appears on screen, joined by an arrow: 10 tags → input disabled, "10 tags is the limit." |
+   | Visual | Component or screen state whose snapshot changes. Embed the snapshot image when the repo stores it, otherwise link it. |
+   | End-to-end | Step of the flow, in order and numbered, with what the spec checks at that step. A reviewer reads the steps to know which of their own manual steps the spec already does. |
+
+   Write unit and integration rows as a small code example rather than a description:
+   the call with the arguments that matter, a few plain words for the setup when the call
+   alone doesn't show it ("of A, B, C", "at 9 tags"), an arrow, and the result the test
+   asserts. Take the values from the test, shortened so the row fits on a line or two:
+   single letters or short names for seeded records, and only the fields the test checks.
+   Bold a refusal or an error. Put the two sides of a limit on neighboring rows so the
+   reader sees where the line is.
+
+   Include existing tests the PR doesn't edit that reach the changed code, such as an
+   end-to-end spec that opens a picker whose data now comes through a changed hook. Mark
+   the file "(unchanged)" in the Test column. When such a test reaches the changed code
+   but doesn't check the behavior the change is about, say what it does check, and put
+   the behavior itself under "Not covered".
+
+   Only list a behavior as covered after undoing it and watching its test fail, the way
+   the `review-code` skill's "What the tests cover" section describes. Say so once, in a
+   line above the groups, rather than on each row. A behavior a test runs but doesn't
+   assert on goes under "Not covered".
+
+   End with a **Not covered** table of the same shape. Its rows are each behavior no test
+   checks, with the manual step that checks it instead or why it doesn't need one, and
+   each kind of test the change skips where a reviewer might expect it, with the reason
+   tied to this change.
+
+   For a change that adds tags to tasks, capped at 10 per task:
+
+   ```markdown
+   **Manual testing steps:**
+
+   1. Run `npm run dev` and open any task.
+   2. Add the tags "work", "Home", and "errands". They show as errands, Home, work.
+   3. Add tags until the task has 10. The tag input is disabled and reads "10 tags is
+      the limit."
+   4. With 10 tags on the task, send `POST /api/tasks/:id/tags` directly. It's refused
+      with `TAG_LIMIT_REACHED`.
+
+   **What the tests cover**
+
+   Undoing any behavior below makes its test fail.
+
+   **Unit and integration.** The sort and the cap both live in `addTag`, so each case
+   runs in milliseconds.
+
+   | Behavior | Test |
+   |---|---|
+   | `listTags()` of `work, Home, errands` → `errands, Home, work` | [`addTag.test.ts`](link) |
+   | `addTag('urgent')` at 9 tags → 10 tags | [`addTag.test.ts`](link) |
+   | `addTag('urgent')` at 10 tags → **`TAG_LIMIT_REACHED`** | [`addTag.test.ts`](link) |
+   | `addTag('Work')` with `work` → `[work]` | [`addTag.test.ts`](link) |
+   | `POST /tasks/1/tags` at 10 tags, through the route → **409** | [`tags.route.test.ts`](link) |
+
+   **Component.** The tag input is the only place the cap shows.
+
+   | Behavior | Test |
+   |---|---|
+   | 9 tags → input enabled, no message | [`TagInput.test.tsx`](link) |
+   | 10 tags → input disabled, "10 tags is the limit." | [`TagInput.test.tsx`](link) |
+
+   **Visual.** The input's look at the limit is new.
+
+   | Behavior | Test |
+   |---|---|
+   | `TagInput` at the limit: ![TagInput at the limit](link) | [`TagInput.stories.tsx`](link) |
+   | `TagList` wrapping a long tag name: ![TagList wrapping a long tag](link) | [`TagInput.stories.tsx`](link) |
+
+   **End-to-end.** Tags are saved through the API, so only a reload shows they persist.
+
+   | Behavior | Test |
+   |---|---|
+   | 1. Opens a task with no tags | [`tags.spec.ts`](link) |
+   | 2. Adds `work` and `Home` from the tag input | [`tags.spec.ts`](link) |
+   | 3. Reloads the page, and the task shows `Home`, `work` | [`tags.spec.ts`](link) |
+   | 1. Filters the task list by `work`, and only tasks tagged `work` show | [`task-filters.spec.ts`](link) (unchanged) |
+
+   **Not covered**
+
+   | Behavior or kind of test | Instead |
+   |---|---|
+   | The `TAG_LIMIT_REACHED` error toast | Manual step 4 checks the refusal. |
+   | An end-to-end spec for the cap | Reaching it means adding 10 tags in a browser, and the route and component tests check the refusal and the disabled input. |
+   ```
+
+Use an ordered list for the manual testing steps, and tables for what the tests cover.
 
 If no test covers the change, part 2 says so in one line. That gap is worth knowing about.
 If CI will not run a suite on this PR, because it is a draft or the workflow's path filters
 skip it, say that too.
 
 For documentation, CI configuration, or a refactor with no behavior change, there are no
-behaviors to put in a table. The section is the manual steps or a command, plus one line
+behaviors to list. The section is the manual testing steps or a command, plus one line
 on how you know behavior didn't change, such as the existing tests that pass before and
 after.
 

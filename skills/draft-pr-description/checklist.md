@@ -57,16 +57,20 @@ is a separate decision.
 How the change was or should be verified. Exact commands. If the PR verifies itself through
 CI, say how.
 
-List each manual step a reviewer takes to see the change work: where to go, what to do,
+Put the manual testing steps first, under a `**Manual testing steps:**` line. List each step a reviewer takes to see the change work: where to go, what to do,
 what they should see, and how to trigger anything that does not happen on its own, such as
 a notification or an error state.
 
-List each behavior the change adds or alters, and for each one, the test that checks it
-(unit, integration, or end-to-end), what that test actually asserts, and whether undoing the
-behavior made it fail, or "no test covers this". Note whether CI runs each suite on this
-PR, and why not if it does not.
+Group the tests by kind (unit and integration, component, visual, end-to-end). For each
+kind the change uses, name the test files, why that kind fits this change, and what it
+covers: the scenarios for unit and integration tests, the states and interactions for
+component tests, the components whose snapshots change for visual tests, and the steps of
+the flow for end-to-end specs. Only list a behavior whose test
+failed when the behavior was undone. Note whether CI runs each suite on this PR, and why
+not if it does not.
 
-Note which kinds of test apply to this change and why, and which don't and why not.
+List what no test covers, with the manual step that checks it, and each kind of test the
+change skips, with the reason tied to this change.
 
 ## Media
 
