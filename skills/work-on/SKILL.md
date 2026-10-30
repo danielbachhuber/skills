@@ -166,52 +166,11 @@ hand-back. Its title is "Review this change in a subthread before you commit?", 
 `src/auth/`, about 300 lines"), and its answers are "Run review" (`primary`) and "Skip
 review". Don't ask in chat as well. Without the plugin, end the hand-back on the question.
 
-If the user says yes, start the review as a child of this thread, in this thread's
-environment so it sees the uncommitted changes:
-
-```bash
-bb thread spawn --project <project id from bb status> --environment "$BB_ENVIRONMENT_ID" \
-  --parent-self --title "Review: <change>" --prompt-file - <<'EOF'
-Use the review-code skill to review the changes in this working tree against
-<merge base, such as origin/main>: committed, staged, and unstaged.
-
-The change is meant to: <one or two sentences from the issue, not from your plan>.
-Issue: <title and link, if there is one>.
-
-This is a read-only review. Another thread is working in this checkout, so don't edit,
-stage, commit, or stash anything, and don't post to GitHub. Put every finding, ranked
-most severe first, with its suggested fix, and the test coverage table in your final
-response. That response is reported back to the thread that started you.
-EOF
-```
-
-Tell the reviewer what the change is for, not how you built it or what you are worried
-about, so its read isn't shaped by yours. Then wait for it:
-
-```bash
-bb thread wait <review thread id> --timeout 30m
-```
-
-Once the report has arrived, archive the review thread so it leaves the sidebar. Its report
-stays readable in this thread and in the archived one:
-
-```bash
-bb thread archive <review thread id>
-```
-
-If the wait timed out or the reviewer stopped without a report, leave it open so the user
-can see what happened.
-
-Check each finding against the code before acting on it:
-
-- **Real, with an obvious fix:** fix it and rerun the tests.
-- **Real, but a product decision or a tradeoff:** bring it to the user with the hand-back,
-  with the options.
-- **Wrong:** drop it, with a one-line reason.
+If the user says yes, use the `review-in-subthread` skill to run the review on this
+thread's working tree. Tell the reviewer what the change is for, from the issue.
 
 Then hand back again: update the PR description with the fixes that changed the code, and
-list the findings and what happened to each. Without `bb`, run the same prompt as a
-subagent instead.
+list the findings and what happened to each.
 
 ## 8. Hand it back
 
@@ -283,6 +242,5 @@ when it already has a reviewer, or when nobody but the user reviews PRs in the r
 | Assuming merging is the whole release | Check for migrations, deploy order, settings outside the code, and anything a revert won't undo. |
 | Building one visual design without showing options | Use `iterate-design` unless a Figma or high-fidelity design exists. |
 | Starting a review the user didn't ask for | Offer it above the composer and run it only on a yes. |
-| Briefing the reviewer with your own doubts | Give it the goal and the diff, and let it reach its own read. |
 | Opening the PR and stopping there | Suggest a reviewer, unless the repo has nobody else reviewing. |
 | Requesting a review without asking | Name the pick and the reason, and request it once the user confirms. |
