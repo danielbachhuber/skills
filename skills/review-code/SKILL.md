@@ -11,6 +11,33 @@ A review ends in decisions the user makes, one per finding. Each finding is writ
 
 When the code under review is a GitHub pull request, also load the `review-pull-request` skill. It adds the choices that act on the PR itself.
 
+## Super Diff for a large change
+
+In a bb thread whose Diff tab shows the change under review, write a Super Diff before reviewing when the change is large. A Super Diff groups the changed files by concern in the Diff tab, so the user can read a large change one part at a time instead of file by file.
+
+Count the changed lines and files, leaving out lockfiles, snapshots, generated code, and docs. Use the PR's base branch, or the thread's merge base, as `<base>`:
+
+```bash
+git diff --numstat origin/<base>...HEAD -- . \
+  ':(exclude)*.lock' ':(exclude)*-lock.json' ':(exclude)*.snap' \
+  ':(exclude)*.md' ':(exclude)docs/**' ':(exclude)**/generated/**' \
+  | awk '{lines += $1 + $2; files++} END {print lines+0, "lines in", files+0, "files"}'
+```
+
+The change is large when it has **150 or more lines, or 10 or more files**. Then load the `super-diff` skill and write one for `--target all`. Reading every hunk to group them is also the first pass of the review. Below both numbers, skip it.
+
+Before writing one, check whether this thread already has one, such as when the user pressed Generate or an earlier turn wrote it:
+
+```bash
+bb super-diff status --target all
+```
+
+| Exit code | Meaning | What to do |
+|---|---|---|
+| 0 | One is stored and the diff hasn't changed since | Skip it |
+| 2 | None is stored | Write one |
+| 3 | One is stored, but files were added, removed, or edited since | Write it again, so the grouping covers the new changes |
+
 ## What to look for
 
 Check the change in this order. Each layer depends on the ones before it, so a problem in an earlier layer matters more than any in a later one:
@@ -95,3 +122,6 @@ In chat, say whether you'd approve, how many findings there are at each priority
 | An approval with no word on what wasn't checked | Name what the review didn't cover |
 | Findings listed in chat | Chat says only the verdict, the finding count, and the coverage count |
 | Reviewing a PR with only these choices | Load `review-pull-request` for the PR's own choices |
+| A large change reviewed with no Super Diff | At 150+ lines or 10+ files, excluding lockfiles, snapshots, generated code, and docs, write one first |
+| A second Super Diff written over the one the thread already has | Run `bb super-diff status --target all` first; skip when it exits 0 |
+| Sizing the change from the PR's +/− totals | Those count lockfiles, snapshots, and docs; use the counting command |
