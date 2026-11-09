@@ -101,7 +101,7 @@ def thread_stats(events):
             "cached": usage.get("cachedInputTokens", 0),
             "output": usage.get("outputTokens", 0),
         },
-        "context": {"peak": context.get("usedTokens", 0), "window": context.get("modelContextWindow", 0)},
+        "context": {"peak": context.get("usedTokens") or 0, "window": context.get("modelContextWindow") or 0},
         "counts": {
             "commands": len(commands),
             "failed": len(failed),
