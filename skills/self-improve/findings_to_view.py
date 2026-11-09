@@ -9,7 +9,11 @@ section of cards with no buttons.
 """
 
 import json
+import os
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pricing import describe_cost, describe_savings  # noqa: E402
 
 TONES = {
     "breakage": "danger",
@@ -37,6 +41,18 @@ def task_prompt(finding):
     return f"{{draft}}\n\nFound in: {sources}"
 
 
+def price_line(finding):
+    """The row's first line: what the problem cost, and what the fix saves."""
+    cost = finding.get("totalCost")
+    savings = finding.get("estimatedSavings") or {}
+    if not cost:
+        return "**Cost:** not priced"
+    line = f"**Cost:** {describe_cost(cost)}"
+    if savings.get("tokens") is not None:
+        line += f" · **Saves:** {describe_savings(savings)}"
+    return line
+
+
 def card(position, finding):
     threads = unique(finding["threads"])
     count = len(threads)
@@ -55,7 +71,7 @@ def card(position, finding):
             {"label": finding["project"], "tone": "neutral"},
             {"label": f"{count} thread{'' if count == 1 else 's'}", "tone": "neutral"},
         ],
-        "summary": f"{finding['cost']}\n\n{quote_line(evidence[0])}" if evidence else finding["cost"],
+        "summary": "\n\n".join(part for part in summary_parts(finding) if part),
         "details": "\n".join(details),
         "draft": finding["task"].strip(),
         "draftLabel": "Task for the new thread",
@@ -70,6 +86,18 @@ def card(position, finding):
             }
         ],
     }
+
+
+def summary_parts(finding):
+    savings = finding.get("estimatedSavings") or {}
+    basis = savings.get("basis")
+    evidence = finding["evidence"]
+    return [
+        price_line(finding),
+        f"**Basis:** {basis}" if basis else "",
+        finding.get("cost") or "",
+        quote_line(evidence[0]) if evidence else "",
+    ]
 
 
 def to_view(findings, date=""):

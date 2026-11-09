@@ -17,6 +17,9 @@ FINDINGS = {
                 {"quote": "Where is it?", "threadId": "thr_bbb2", "speaker": "User"},
             ],
             "task": "Add the rule.",
+            "removes": [{"threadId": "thr_aaa1", "turn": 2}],
+            "totalCost": {"tokens": 18_400_000, "ms": 42 * 60_000, "threads": 6},
+            "estimatedSavings": {"tokens": 12_000_000, "ms": 30 * 60_000, "basis": "the rule removes 2 turns per thread"},
         }
     ],
     "observations": [{"text": "A flaky API", "threads": ["thr_ccc3"]}],
@@ -46,6 +49,20 @@ class FindingsToViewTest(unittest.TestCase):
         self.assertIn("> Where is it?", details)
         self.assertIn("**Found in:** `thr_aaa1`, `thr_bbb2`", details)
         self.assertNotIn("@thread:", details)
+
+    def test_summary_starts_with_the_cost_and_savings_line(self):
+        summary = to_view(FINDINGS)["sections"][0]["items"][0]["summary"]
+        lines = summary.split("\n")
+        self.assertEqual(
+            lines[0], "**Cost:** 18.4M tokens, 42 min across 6 threads · **Saves:** about 12M tokens, 30 min"
+        )
+        self.assertIn("**Basis:** the rule removes 2 turns per thread", summary)
+        self.assertIn("2 extra turns", summary)
+
+    def test_unpriced_findings_say_so_on_the_row(self):
+        finding = {**FINDINGS["findings"][0], "totalCost": None, "estimatedSavings": None}
+        summary = to_view({**FINDINGS, "findings": [finding]})["sections"][0]["items"][0]["summary"]
+        self.assertTrue(summary.startswith("**Cost:** not priced\n\n2 extra turns"))
 
     def test_observations_become_a_section_without_buttons(self):
         seen = to_view(FINDINGS)["sections"][1]

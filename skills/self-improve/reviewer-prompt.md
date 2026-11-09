@@ -10,7 +10,7 @@ You are reviewing recent bb agent threads to find changes that would make future
 
 Start from those numbers: a thread with many user messages points to correction overhead, high tokens or peak context with no subagents points to tool and token cost, and long turn times or time waiting on the user point to excess steps or non-chat UX.
 
-Each thread has a trimmed transcript at `{{DIR}}/<thread-id>.txt`: the user's messages, the assistant reply before each, the final reply, and the command lines flagged as failed, repeated, large, or slow. `[… n sections omitted …]` marks the tool calls and replies cut between them. `{{DIR}}/<thread-id>.tools.txt` beside it lists the thread's failed and repeated commands, largest outputs, slowest calls, and files read three or more times.
+Each thread has a trimmed transcript at `{{DIR}}/<thread-id>.txt`: the user's messages, the assistant reply before each, the final reply, and the command lines flagged as failed, repeated, large, or slow. `[… n sections omitted …]` marks the tool calls and replies cut between them. `{{DIR}}/<thread-id>.tools.txt` beside it lists the thread's failed and repeated commands, largest outputs, slowest calls, files read three or more times, and a numbered table of its turns: each turn's model calls, tokens, time, peak context, and the message that started it.
 
 Do not spawn threads, message threads, or change files.
 
@@ -55,9 +55,13 @@ Target: <file path or component>
 Project: <bb project name>
 Threads: <every thread ID where it happened>
 Cost: <what it cost, e.g. "3 extra turns", "20 minutes of rework", "work lost", "40 failed calls", "about 2M tokens">
+Removes: <for each thread, the calls the problem took and how many the fix removes, by turn number from its Turns table, e.g. "thr_abc turn 4: 6 calls, removes 5; thr_def turn 2: whole turn">
+Basis: <one line on why the fix removes those calls, e.g. "the script replaces 6 model calls per PR with 1">
 Evidence:
 > <verbatim quote from the transcript, or a command line or output from the tool log> (<thread-id>, <User, Assistant, or System for tool calls and their output>)
 Task: <the prompt for a new agent thread: what to change, in which files, and how to tell it is done. It must make sense to an agent that has never seen these transcripts, so state the facts instead of pointing at the thread.>
 ```
+
+Do not estimate tokens or time for `Removes`; a script prices each named call from the turn's own numbers. Count calls from the transcript: each assistant step is one model call, and tool calls made together in one step share it. For correction overhead, name the turns the user spent correcting, as whole turns.
 
 Then list what you saw once and could not tie to a fix, one line each with its thread ID. Then, for each of the five signals with no findings, write one line saying you found none. Report nothing else.

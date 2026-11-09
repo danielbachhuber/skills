@@ -12,8 +12,9 @@ Writes into DIR, and prints DIR on the last line:
                          tool calls, failed commands, tokens, score
   <thread-id>.txt        a selected thread's trimmed transcript
                          (see selection.trim)
-  <thread-id>.tools.txt  its scoring numbers, token usage, and tool calls
-                         (see tool_stats.py)
+  <thread-id>.tools.txt  its scoring numbers, token usage, tool calls
+                         (see tool_stats.py), and a numbered table of its
+                         turns that findings cite (see pricing.py)
   tool-summary.md        tool and token patterns across the threads whose
                          logs were read
   slow-commands.json     `bb tokenomics commands` for the same days, when
@@ -36,6 +37,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from selection import entry_from_stats, estimate, flagged_commands, pack, score, select, signals, trim  # noqa: E402
 from tool_stats import digest, duration, human, summary, thread_stats  # noqa: E402
+from pricing import load_turns, requests_from_events, turn_lines  # noqa: E402
 
 BATCH_BYTES = 100_000
 # Event logs are read for this many times --top threads, so failed commands
@@ -150,10 +152,12 @@ def main():
     first = dict(zip((e["threadId"] for e in entries), score([signals(e) for e in entries])))
     pool = select([(e["threadId"], origin(e)) for e in ranked(first)], opts.top * POOL_FACTOR)
 
-    stats = {}
+    stats, requests = {}, {}
     for e in entries:
         if e["threadId"] in pool and e["threadId"] not in stats:
-            stats[e["threadId"]] = thread_stats(json.loads(bb("thread", "log", e["threadId"], "--json", "--all")))
+            events = json.loads(bb("thread", "log", e["threadId"], "--json", "--all"))
+            stats[e["threadId"]] = thread_stats(events)
+            requests[e["threadId"]] = requests_from_events(events)
 
     # Second pass adds failed commands for the threads whose logs were read.
     final = dict(
@@ -194,7 +198,8 @@ def main():
             with open(os.path.join(out, f"{thread_id}.txt"), "w") as f:
                 f.write(text)
             with open(os.path.join(out, f"{thread_id}.tools.txt"), "w") as f:
-                f.write(numbers_line(e) + digest(s))
+                turns = turn_lines(load_turns(thread_id, requests.get(thread_id)))
+                f.write(numbers_line(e) + digest(s) + "".join(line + "\n" for line in turns))
             row["numbers"] = numbers_line(e).removeprefix("Numbers: ").strip()
             row["user_turns"] = str(log.count("── User "))
             row["bytes"] = str(len(text))
