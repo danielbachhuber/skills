@@ -22,7 +22,7 @@ TRANSCRIPTS = os.path.expanduser("~/.claude/projects")
 SAID_CHARS = 60
 
 
-def build_turns(turn_rows, usage_rows, context_rows, call_times=None, requests=None):
+def build_turns(turn_rows, usage_rows, context_rows, call_times=None, requests=None, subagent_rows=()):
     """One dict per turn, numbered from 1 in the order the turns started.
 
     turn_rows:    (started_at, completed_at) per turn; completed_at may be None
@@ -31,6 +31,9 @@ def build_turns(turn_rows, usage_rows, context_rows, call_times=None, requests=N
     call_times:   created_at of each model call, from the transcript; without
                   it, calls are counted as distinct context sizes in the turn
     requests:     (created_at, text) of each message that started a turn
+    subagent_rows: (created_at, tokens) per subagent model call, counted in
+                  the turn that started before it, since a background
+                  subagent can finish after its turn ends
     """
     starts = sorted((s, e) for s, e in turn_rows if s is not None)
     turns = []
@@ -44,6 +47,7 @@ def build_turns(turn_rows, usage_rows, context_rows, call_times=None, requests=N
             return t >= start and (stop is None or t <= stop) and (following is None or t < following)
 
         tokens = sum(n for t, n in usage_rows if inside(t))
+        subagents = sum(n for t, n in subagent_rows if t >= start and (following is None or t < following))
         sizes = [n for t, n in context_rows if inside(t)]
         if call_times is not None:
             calls = sum(1 for t in call_times if inside(t))
@@ -61,6 +65,7 @@ def build_turns(turn_rows, usage_rows, context_rows, call_times=None, requests=N
                 "tokens": tokens,
                 "calls": max(calls, 1) if tokens else calls,
                 "context": max(sizes, default=0),
+                "subagentTokens": subagents,
                 "said": " ".join(said.split())[:SAID_CHARS],
             }
         )
@@ -93,19 +98,24 @@ def turn_lines(turns):
     lines = ["Turns (cite as `<thread> turn <n>: <calls> calls, removes <k>`):"]
     for t in turns:
         said = f'  "{t["said"]}"' if t["said"] else ""
+        subagents = f", subagents {tokens_text(t['subagentTokens'])} tokens" if t.get("subagentTokens") else ""
         lines.append(
             f"  turn {t['n']}: {t['calls']} calls, {tokens_text(t['tokens'])} tokens, "
-            f"{time_text(t['ms'])}, context up to {tokens_text(t['context'])}{said}"
+            f"{time_text(t['ms'])}, context up to {tokens_text(t['context'])}{subagents}{said}"
         )
     return lines
 
 
 def _share(turns, calls):
-    """Tokens and time of `calls` calls spread evenly over `turns`."""
+    """Tokens and time of `calls` calls spread evenly over `turns`. All of
+    them includes the subagents the turns started; some of them does not,
+    since which calls started a subagent is not known."""
     total_calls = sum(t["calls"] for t in turns)
     if not total_calls:
         return 0, 0
     calls = min(calls, total_calls)
+    if calls == total_calls:
+        return sum(t["tokens"] + t.get("subagentTokens", 0) for t in turns), sum(t["ms"] for t in turns)
     tokens = sum(t["tokens"] for t in turns) * calls / total_calls
     ms = sum(t["ms"] for t in turns) * calls / total_calls
     return round(tokens), round(ms)
@@ -210,7 +220,8 @@ def load_turns(thread_id, requests=None, db=DB):
         usage_rows = q("select created_at, input + cache_read + output from usage where thread_id = ?")
         context_rows = q("select created_at, used_tokens from context where thread_id = ?")
         session = q("select session_id from threads where thread_id = ?")
+        subagent_rows = q("select created_at, input + cache_read + output from subagent_calls where thread_id = ?")
     finally:
         conn.close()
     session_id = session[0][0] if session else None
-    return build_turns(turn_rows, usage_rows, context_rows, _call_times(session_id), requests)
+    return build_turns(turn_rows, usage_rows, context_rows, _call_times(session_id), requests, subagent_rows)

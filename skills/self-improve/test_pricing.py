@@ -24,8 +24,14 @@ CONTEXT_ROWS = [(1 * MIN, 400_000), (2 * MIN, 600_000), (21 * MIN, 486_000)]
 CALL_TIMES = [1 * MIN, 2 * MIN] + [20 * MIN + i * 1000 for i in range(76)]
 
 
+# A background subagent that finishes after turn 1 ends still counts in turn 1.
+SUBAGENT_ROWS = [(15 * MIN, 500_000)]
+
+
 def turns():
-    return build_turns(TURN_ROWS, USAGE_ROWS, CONTEXT_ROWS, CALL_TIMES, [(0, "Fix the   login"), (19 * MIN, "Now the tests")])
+    return build_turns(
+        TURN_ROWS, USAGE_ROWS, CONTEXT_ROWS, CALL_TIMES, [(0, "Fix the   login"), (19 * MIN, "Now the tests")], SUBAGENT_ROWS
+    )
 
 
 class BuildTurnsTest(unittest.TestCase):
@@ -33,7 +39,7 @@ class BuildTurnsTest(unittest.TestCase):
         first, second = turns()
         self.assertEqual(
             first,
-            {"n": 1, "startedAt": 0, "ms": 10 * MIN, "tokens": 1_000_000, "calls": 2, "context": 600_000, "said": "Fix the login"},
+            {"n": 1, "startedAt": 0, "ms": 10 * MIN, "tokens": 1_000_000, "calls": 2, "context": 600_000, "subagentTokens": 500_000, "said": "Fix the login"},
         )
         self.assertEqual((second["n"], second["calls"], second["tokens"], second["said"]), (2, 76, 37_100_000, "Now the tests"))
 
@@ -48,6 +54,7 @@ class BuildTurnsTest(unittest.TestCase):
 
     def test_table_lines_cite_turn_numbers(self):
         lines = turn_lines(turns())
+        self.assertIn("turn 1: 2 calls, 1M tokens, 10 min, context up to 600K, subagents 500K tokens", lines[1])
         self.assertIn("turn 2: 76 calls, 37.1M tokens, 20 min, context up to 486K", lines[2])
         self.assertEqual(turn_lines([]), [])
 
@@ -62,13 +69,18 @@ class PriceTest(unittest.TestCase):
 
     def test_a_whole_turn_or_thread_by_default(self):
         cost, savings, _ = price([{"threadId": "thr_a", "turn": 1}, {"threadId": "thr_b"}], {"thr_a": turns(), "thr_b": turns()})
-        self.assertEqual(cost["tokens"], 1_000_000 + 38_100_000)
+        # A whole turn includes the subagents it started.
+        self.assertEqual(cost["tokens"], 1_500_000 + 38_600_000)
         self.assertEqual(cost["threads"], 2)
         self.assertEqual(savings["tokens"], cost["tokens"])
 
     def test_counts_are_capped_at_what_the_turn_had(self):
         cost, savings, _ = price([{"threadId": "thr_a", "turn": 1, "calls": 9, "removed": 12}], {"thr_a": turns()})
-        self.assertEqual((cost["tokens"], savings["tokens"]), (1_000_000, 1_000_000))
+        self.assertEqual((cost["tokens"], savings["tokens"]), (1_500_000, 1_500_000))
+
+    def test_some_of_a_turns_calls_leave_out_its_subagents(self):
+        cost, _, _ = price([{"threadId": "thr_a", "turn": 1, "calls": 1}], {"thr_a": turns()})
+        self.assertEqual(cost["tokens"], 500_000)
 
     def test_reports_turns_it_cannot_find(self):
         cost, _, problems = price([{"threadId": "thr_a", "turn": 9}, {"threadId": "thr_z"}], {"thr_a": turns()})
@@ -101,6 +113,8 @@ class LoadTurnsTest(unittest.TestCase):
                 create table usage (thread_id, created_at, input, cache_read, output);
                 create table context (thread_id, created_at, used_tokens);
                 create table threads (thread_id, session_id);
+                create table subagent_calls (thread_id, created_at, input, cache_read, output);
+                insert into subagent_calls values ('thr_a', 120, 0, 50, 0);
                 insert into turn_times values ('thr_a', 't1', 0, 100);
                 insert into usage values ('thr_a', 100, 10, 980, 10);
                 insert into context values ('thr_a', 50, 400), ('thr_a', 60, 600);
@@ -110,7 +124,7 @@ class LoadTurnsTest(unittest.TestCase):
             conn.commit()
             conn.close()
             [turn] = load_turns("thr_a", db=path)
-        self.assertEqual((turn["tokens"], turn["calls"], turn["context"]), (1000, 2, 600))
+        self.assertEqual((turn["tokens"], turn["calls"], turn["context"], turn["subagentTokens"]), (1000, 2, 600, 50))
 
 
 class PriceAllTest(unittest.TestCase):
