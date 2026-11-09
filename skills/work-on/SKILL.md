@@ -42,7 +42,11 @@ theirs to make. Everything else gets written down and the work goes on.
 
 If the change alters what a user sees:
 
-- **A Figma link or a high-fidelity design exists:** build from it.
+- **A Figma link or a high-fidelity design exists:** build from it. Send Figma reads
+  (`get_screenshot`, `get_variable_defs`, `get_design_context`) to a subagent, and have it
+  return only the values the change needs, such as colors, spacing, type sizes, and copy.
+  Screenshots and variable dumps are large, and they stay in this thread's context for the
+  rest of the work.
 - **Otherwise:** use the `iterate-design` skill, show the options, and wait for the user
   to pick one before implementing any of them. Work out steps 3 to 5 first and post them
   with the options, so the user answers everything in one stop.
@@ -141,11 +145,40 @@ Build the change, run the tests, and check it in the running app when the change
 (the `run` skill covers launching it). Take screenshots of each visible state for the
 hand-back.
 
-## 7. Offer a review in a subthread
+## 7. Split work that becomes more than one PR
+
+When the plan splits into more than one PR, such as a stack or a set of PRs that each
+cover part of the issue, finish PR 1 in this thread through the hand-back (step 9). Then
+start each later PR in its own child thread:
+
+```bash
+~/.claude/scripts/start-branch-thread <branch> --base <parent-branch> --prompt-file - \
+  -- --parent-self --parent-notifications stuck <<'EOF'
+<prompt>
+EOF
+```
+
+`<parent-branch>` is the branch the PR stacks on, or the default branch when the PRs are
+independent. The child thread knows only what its prompt says, so the prompt states:
+
+- that PR's scope: what it changes, and what it leaves to the other PRs
+- the decisions already made, such as the testing strategy, edge-case handling, rollout
+  plan, and the visual direction the user picked
+- the absolute paths of any drafts, such as the PR description for PR 1, and the URLs
+  of the PRs already open
+
+Tell it to use the `work-on` skill, so it posts its own plan and hands back its own PR.
+
+This thread keeps only the plan and the PR links. It does not check out the later
+branches or move from worktree to worktree itself; each child thread works in its own.
+One thread that builds two to four PRs in turn carries every diff, test run, and PR
+description it has written into each later PR, and runs out of context.
+
+## 8. Offer a review in a subthread
 
 Once the change is built and its tests pass, decide whether to offer the user a second read.
 A reviewer that starts fresh, without this thread's reasoning, catches what the author talked
-themselves past. The review is opt-in: offer it in the hand-back (step 8) and run it only
+themselves past. The review is opt-in: offer it in the hand-back (step 9) and run it only
 when the user says yes. Offer it when any of these applies:
 
 - the change touches more than one module, or about 150 or more lines outside tests and
@@ -172,21 +205,21 @@ thread's working tree. Tell the reviewer what the change is for, from the issue.
 Then hand back again: update the PR description with the fixes that changed the code, and
 list the findings and what happened to each.
 
-## 8. Hand it back
+## 9. Hand it back
 
 When the user's instructions are to wait for their review before committing:
 
 1. **PR description.** If the work is going to be a pull request, use the
    `draft-pr-description` skill. The testing strategy, edge cases, and any rollout plan
-   from steps 3 to 5 belong in it, and so do review findings from step 7 that changed
+   from steps 3 to 5 belong in it, and so do review findings from step 8 that changed
    the code.
-2. **Review offer.** If step 7 says to offer a review, ask as it describes.
+2. **Review offer.** If step 8 says to offer a review, ask as it describes.
 3. Stop. Don't commit, push, or open the PR until the user confirms.
 
 When the user has told you to commit and push without review, still draft the PR
 description before opening the PR. Don't stop to offer the review.
 
-## 9. Suggest reviewers
+## 10. Suggest reviewers
 
 Once the PR is open, suggest who should review it. Skip this step when the PR is a draft,
 when it already has a reviewer, or when nobody but the user reviews PRs in the repo.
@@ -242,5 +275,7 @@ when it already has a reviewer, or when nobody but the user reviews PRs in the r
 | Assuming merging is the whole release | Check for migrations, deploy order, settings outside the code, and anything a revert won't undo. |
 | Building one visual design without showing options | Use `iterate-design` unless a Figma or high-fidelity design exists. |
 | Starting a review the user didn't ask for | Offer it above the composer and run it only on a yes. |
+| Building every PR of a stack in one thread, moving between worktrees | Finish PR 1 here, then start each later PR with `start-branch-thread` and a prompt that carries the scope, decisions, and draft paths. |
+| Reading Figma screenshots and variables in this thread | Send them to a subagent that returns only the values the change needs. |
 | Opening the PR and stopping there | Suggest a reviewer, unless the repo has nobody else reviewing. |
 | Requesting a review without asking | Name the pick and the reason, and request it once the user confirms. |
