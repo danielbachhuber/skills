@@ -14,6 +14,21 @@ something the user can read.
 Only two things wait for the user: choosing a visual direction, and any decision that is
 theirs to make. Everything else gets written down and the work goes on.
 
+## Repos that work in the main checkout
+
+CLAUDE.md names repos whose threads work in the repo's main checkout on its default
+branch, with no branch, worktree, or PR, such as `danielbachhuber/bb-plugins`,
+`danielbachhuber/skills`, `danielbachhuber/dotfiles`, and
+`danielbachhuber/second-brain`. In those repos, CLAUDE.md's rule wins over this skill
+unless the user explicitly asks for a worktree:
+
+- Don't create a branch or worktree in step 1, and don't start child threads with
+  `start-branch-thread` in step 7. Split work becomes a series of commits.
+- Skip the PR description in step 9 and reviewer suggestions in step 10. Instead,
+  commit and push at the end of each round, as CLAUDE.md describes.
+- Steps 2 to 6 still apply. If step 8 calls for a review, offer it after the push, and
+  have the reviewer read the pushed commits.
+
 ## 1. Read the issue and the code
 
 - Read the issue body, every comment, and any linked issues and PRs. Later comments often
@@ -36,7 +51,8 @@ theirs to make. Everything else gets written down and the work goes on.
   `file:line` references. Tests named after old bugs, guard clauses with comments, and odd
   constants mark edge cases someone has already hit. Carry them into step 4.
 - Check for related work: an open PR or a branch for the same issue. If the work needs its
-  own branch, set it up the way CLAUDE.md says.
+  own branch, set it up the way CLAUDE.md says. In a main-checkout repo (above), it
+  doesn't.
 
 ## 2. Visual changes
 

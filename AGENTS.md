@@ -33,6 +33,7 @@ Say what you found, and what you took from it, when you present the design.
 ## Push after you commit
 
 A commit stays local until it is pushed, so work that looks finished in this
-checkout is still invisible everywhere else. When you have been asked to
-commit, push the branch in the same step rather than leaving the commit sitting
-here.
+checkout is still invisible everywhere else. Threads work in this checkout on
+`main`, with no branches, worktrees, or pull requests unless the user asks for
+a worktree, and commit at the end of each round of work. Push in the same step
+as the commit rather than leaving the commit sitting here.
