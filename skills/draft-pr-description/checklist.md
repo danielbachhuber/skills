@@ -38,8 +38,8 @@ place is a figure they cannot trust.
 ## Decisions
 
 Each choice made while building this, the alternative that was genuinely considered, and why
-it lost. Include decisions the reviewer would otherwise ask about, and the ones you talked
-yourself out of.
+it lost. Include decisions the reviewer would otherwise ask about, and alternatives that
+were tried or discussed in the thread and then dropped.
 
 ## Verified, not assumed
 
@@ -86,6 +86,7 @@ should be sceptical of.
 
 ## Corrections
 
-A number you revised, a design you priced and rejected, an assumption that turned out wrong.
-The rejected design and the wrong assumption belong under Decisions or Uncertainties. A
-correction to your own earlier analysis stays out of the description entirely.
+A number that changed after a measurement, a design that was costed and dropped, an
+assumption a test or the user showed was wrong. The dropped design and the wrong assumption
+belong under Decisions or Uncertainties. A figure fixed between two drafts of a message stays
+out of the description entirely.

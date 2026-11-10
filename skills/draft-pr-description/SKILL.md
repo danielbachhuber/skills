@@ -103,15 +103,15 @@ conversation rather than the diff:
 
 | Question | What belongs there |
 | --- | --- |
-| `Decisions` | Each choice, the alternative genuinely considered, why it lost. Including the ones you talked yourself out of. |
+| `Decisions` | Each choice, the alternative genuinely considered, why it lost. Including alternatives that were tried or discussed in the thread and then dropped. |
 | `Verified, not assumed` | Everything checked with a command or an API call rather than reasoned about, and the check itself. Branch protection, downstream consumers, whether a flag survives, whether a skipped job blocks a merge. |
 | `Uncertainties` | Estimated versus measured, what a reviewer should doubt, figures that rest on outliers. |
 
-Scan back through the session for corrections. A number you revised, a design you priced
-and rejected, an assumption that turned out wrong: the design and the assumption belong in
-the description. They are the details a reviewer would otherwise spend an hour
-rediscovering, and they are invisible in the diff. A correction to your own earlier analysis
-does not.
+Scan the thread's messages, command output, and commits for corrections. A number that
+changed after a measurement, a design that was costed and dropped, an assumption a test or
+the user showed was wrong: the design and the assumption belong in the description. They are
+the details a reviewer would otherwise spend an hour rediscovering, and they are invisible in
+the diff. A figure fixed between two drafts of a message does not.
 
 Where the checklist turns up something you have not measured or checked, go do it now, or
 carry it into the description as an uncertainty.
@@ -390,7 +390,7 @@ questions that section draws on, write that section alone, and splice it in with
 | --- | --- |
 | Description restates the diff and nothing else | The diff is the one thing a reviewer can already read. The description earns its place through the prior state, the decisions, and what was verified. |
 | Asked "open the PR?" in chat, or as an inline question | Publish the step 8 card each time the draft file is written. It links the draft and stays above the composer until the author answers. |
-| Session decisions left out | The repo is readable later; the conversation is not. An alternative you priced and rejected is lost unless the description records it. |
+| Session decisions left out | The repo is readable later; the conversation is not. An alternative that was costed and dropped is lost unless the description records it. |
 | Numbers without provenance | A figure with no method and no caveat comes back as a confident claim the reviewer cannot check. |
 | Regenerating a whole body to fix one section | Splice one section. Wholesale regeneration rewrites prose the author already signed off. |
 | Using the repo's template by default | The default is Proposed Changes, Approach, History, Decisions, Testing Instructions. Switch to the repo's structure only for a reason, such as a stack of PRs that already uses it, and say which reason. |
