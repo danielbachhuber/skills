@@ -40,6 +40,13 @@ unless the user explicitly asks for a worktree:
   gh issue view <n> --json body,comments,closedByPullRequestsReferences,assignees
   ```
 
+- In your first message about the issue, quote the issue body verbatim as a Markdown
+  blockquote, under a line that links the issue by its full title and number. Quote the
+  whole body, not a summary or an excerpt, so the user has the original wording in the
+  chat to check your reading against. If a later comment changes what the body asks for,
+  quote that comment too, with its author. Leave out images and long logs, and say where
+  you left something out.
+
 - If nobody is assigned to the issue, assign it to the user. Leave an existing assignee
   alone, even if it's someone else, and mention it in your first message.
 
@@ -285,6 +292,7 @@ when it already has a reviewer, or when nobody but the user reviews PRs in the r
 | Mistake | What to do instead |
 |---------|-----------|
 | Reading only the issue body | Read the comments and linked PRs too. |
+| Paraphrasing the issue in chat | Quote the body verbatim in your first message about it. |
 | Writing unit tests by default | Say which kinds of tests fit and why, and what goes untested. |
 | Putting edge cases only in test names | List them with their handling so the user can see and redirect. |
 | Waiting for approval on the test plan | Post it and keep building, unless it asks the user a real question. |
