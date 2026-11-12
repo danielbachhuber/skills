@@ -22,7 +22,7 @@ branch, with no branch, worktree, or PR, such as `danielbachhuber/bb-plugins`,
 `danielbachhuber/second-brain`. In those repos, CLAUDE.md's rule wins over this skill
 unless the user explicitly asks for a worktree:
 
-- Don't create a branch or worktree in step 1, and don't start child threads with
+- Don't create a branch or worktree in step 1, and don't start new threads with
   `start-branch-thread` in step 7. Split work becomes a series of commits.
 - Skip the PR description in step 9 and reviewer suggestions in step 10. Instead,
   commit and push at the end of each round, as CLAUDE.md describes.
@@ -172,30 +172,39 @@ hand-back.
 
 When the plan splits into more than one PR, such as a stack or a set of PRs that each
 cover part of the issue, finish PR 1 in this thread through the hand-back (step 9). Then
-start each later PR in its own child thread:
+start the next PR in a new top-level thread, not a child of this one:
 
 ```bash
-~/.claude/scripts/start-branch-thread <branch> --base <parent-branch> --prompt-file - \
-  -- --parent-self --parent-notifications stuck <<'EOF'
+~/.claude/scripts/start-branch-thread <branch> --base <parent-branch> --prompt-file - <<'EOF'
 <prompt>
 EOF
 ```
 
+Don't pass `--parent-self`. A thread with no parent stands on its own, so the user can
+archive this thread once PR 1 is done while the later PRs are still in progress.
+
 `<parent-branch>` is the branch the PR stacks on, or the default branch when the PRs are
-independent. The child thread knows only what its prompt says, so the prompt states:
+independent. For a stack, start only the next PR, since its branch needs this one's
+commits; that thread starts the one after it when it hands back, and so on down the
+stack. For independent PRs, start them all at once. The new thread knows only what its
+prompt says, so the prompt states:
 
 - that PR's scope: what it changes, and what it leaves to the other PRs
 - the decisions already made, such as the testing strategy, edge-case handling, rollout
   plan, and the visual direction the user picked
 - the absolute paths of any drafts, such as the PR description for PR 1, and the URLs
   of the PRs already open
+- for a stack, the PRs still to come after it, with the scope of each, so it can start
+  the next thread in the same way
 
 Tell it to use the `work-on` skill, so it posts its own plan and hands back its own PR.
+Link each new thread in the hand-back as `@thread:<id>`, so the user can find it after
+archiving this one.
 
-This thread keeps only the plan and the PR links. It does not check out the later
-branches or move from worktree to worktree itself; each child thread works in its own.
-One thread that builds two to four PRs in turn carries every diff, test run, and PR
-description it has written into each later PR, and runs out of context.
+This thread does not check out the later branches or move from worktree to worktree
+itself; each new thread works in its own. One thread that builds two to four PRs in turn
+carries every diff, test run, and PR description it has written into each later PR, and
+runs out of context.
 
 ## 8. Offer a review in a subthread
 
@@ -299,7 +308,7 @@ when it already has a reviewer, or when nobody but the user reviews PRs in the r
 | Assuming merging is the whole release | Check for migrations, deploy order, settings outside the code, and anything a revert won't undo. |
 | Building one visual design without showing options | Use `iterate-design` unless a Figma or high-fidelity design exists. |
 | Starting a review the user didn't ask for | Offer it above the composer and run it only on a yes. |
-| Building every PR of a stack in one thread, moving between worktrees | Finish PR 1 here, then start each later PR with `start-branch-thread` and a prompt that carries the scope, decisions, and draft paths. |
+| Building every PR of a stack in one thread, moving between worktrees | Finish PR 1 here, then start the next PR in a new top-level thread with `start-branch-thread`, without `--parent-self`, and a prompt that carries the scope, decisions, and draft paths. |
 | Reading Figma screenshots and variables in this thread | Send them to a subagent that returns only the values the change needs. |
 | Opening the PR and stopping there | Suggest a reviewer, unless the repo has nobody else reviewing. |
 | Requesting a review without asking | Name the pick and the reason, and request it once the user confirms. |
