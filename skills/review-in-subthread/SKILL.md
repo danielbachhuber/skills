@@ -50,7 +50,7 @@ EOF
 For a pull request, `start-branch-thread` finds or creates the worktree with the PR's branch and sets the diff base:
 
 ```bash
-~/.claude/scripts/start-branch-thread <PR URL> --prompt-file - -- --parent-self --title "Review: <PR title>" <<'EOF'
+~/.claude/scripts/start-branch-thread <PR URL> --prompt-file - -- --parent-self --title "Review #<n>: <PR title without a prefix such as feat(scope):>" <<'EOF'
 Use the review-code skill to review <PR title> (#<n>), <PR URL>, against its base branch.
 
 The change is meant to: <one or two sentences from the PR description or its issue>.

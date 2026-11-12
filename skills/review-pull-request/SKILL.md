@@ -48,7 +48,7 @@ For a single-line comment, drop `start` and `startSide` from the mutation call, 
 
 ### Fix in a PR against this PR
 
-Start the thread with `~/.claude/scripts/start-branch-thread <PR URL> --against-pr`. Its prompt stands alone, since that thread sees nothing of this one. It names the PR (title, number, and link), states the finding and the fix in full, and asks for a PR opened with `gh pr create --base <PR head branch>`.
+Start the thread with `~/.claude/scripts/start-branch-thread <PR URL> --against-pr -- --title "Refine #<n>: <the fix, lower-cased>"`. Its prompt stands alone, since that thread sees nothing of this one. It names the PR (title, number, and link), states the finding and the fix in full, and asks for a PR opened with `gh pr create --base <PR head branch>`.
 
 ## After approving
 

@@ -176,13 +176,15 @@ its PR is open, propose the next PR to the user (step 11). When they approve, st
 a new top-level thread, not a child of this one:
 
 ```bash
-~/.claude/scripts/start-branch-thread <branch> --base <parent-branch> --prompt-file - <<'EOF'
+~/.claude/scripts/start-branch-thread <branch> --base <parent-branch> --prompt-file - -- --title "<title>" <<'EOF'
 <prompt>
 EOF
 ```
 
-Don't pass `--parent-self`. A thread with no parent stands on its own, so the user can
-archive this thread once PR 1 is done while the later PRs are still in progress.
+The title is `Dev #<issue>: <the PR's scope>`, such as "Dev #6617: answer
+channels.getPersona from the channel repository". Don't pass `--parent-self`. A thread
+with no parent stands on its own, so the user can archive this thread once PR 1 is done
+while the later PRs are still in progress.
 
 `<parent-branch>` is the branch the PR stacks on, or the default branch when the PRs are
 independent. For a stack, start only the next PR, since its branch needs this one's
