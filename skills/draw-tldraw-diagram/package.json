@@ -1,0 +1,12 @@
+{
+  "name": "draw-tldraw-diagram",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "esbuild": "^0.25.0",
+    "playwright": "^1.55.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tldraw": "5.6.0"
+  }
+}
