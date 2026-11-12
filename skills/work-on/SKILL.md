@@ -171,8 +171,8 @@ hand-back.
 ## 7. Split work that becomes more than one PR
 
 When the plan splits into more than one PR, such as a stack or a set of PRs that each
-cover part of the issue, finish PR 1 in this thread through the hand-back (step 9). Then
-start the next PR in a new top-level thread, not a child of this one:
+cover part of the issue, finish PR 1 in this thread through the hand-back (step 9). Once
+its PR is open, start the next PR in a new top-level thread, not a child of this one:
 
 ```bash
 ~/.claude/scripts/start-branch-thread <branch> --base <parent-branch> --prompt-file - <<'EOF'
@@ -185,8 +185,9 @@ archive this thread once PR 1 is done while the later PRs are still in progress.
 
 `<parent-branch>` is the branch the PR stacks on, or the default branch when the PRs are
 independent. For a stack, start only the next PR, since its branch needs this one's
-commits; that thread starts the one after it when it hands back, and so on down the
-stack. For independent PRs, start them all at once. The new thread knows only what its
+commits; that thread starts the one after it once its own PR is open, and so on down
+the stack. This step applies to every thread in the stack, not only the one that split the
+plan: a thread started for PR 2 of 3 starts PR 3 (step 11). For independent PRs, start them all at once. The new thread knows only what its
 prompt says, so the prompt states:
 
 - that PR's scope: what it changes, and what it leaves to the other PRs
@@ -194,8 +195,8 @@ prompt says, so the prompt states:
   plan, and the visual direction the user picked
 - the absolute paths of any drafts, such as the PR description for PR 1, and the URLs
   of the PRs already open
-- for a stack, the PRs still to come after it, with the scope of each, so it can start
-  the next thread in the same way
+- for a stack, the PRs still to come after it, with the scope of each, and that it
+  starts the next one in a new top-level thread once its own PR is open
 
 Tell it to use the `work-on` skill, so it posts its own plan and hands back its own PR.
 Link each new thread in the hand-back as `@thread:<id>`, so the user can find it after
@@ -296,6 +297,16 @@ when it already has a reviewer, or when nobody but the user reviews PRs in the r
    gh pr edit <n> --add-reviewer <login>
    ```
 
+## 11. Start the next PR in a stack
+
+When this thread's PR is one of a stack and more PRs follow it, start the next one as
+soon as this PR is open, as step 7 describes. Check the issue's plan and this thread's
+prompt for the PRs still to come. Base the new branch on this PR's branch, or on the
+default branch if the PRs below it have merged and the next PR doesn't need this one's
+commits. Don't hold it back for decisions the next PR leaves open: its own thread brings
+them to the user in its plan. Link it in the reply as `@thread:<id>`. Skip this step when
+this PR is the last in the stack.
+
 ## Common mistakes
 
 | Mistake | What to do instead |
@@ -310,5 +321,6 @@ when it already has a reviewer, or when nobody but the user reviews PRs in the r
 | Starting a review the user didn't ask for | Offer it above the composer and run it only on a yes. |
 | Building every PR of a stack in one thread, moving between worktrees | Finish PR 1 here, then start the next PR in a new top-level thread with `start-branch-thread`, without `--parent-self`, and a prompt that carries the scope, decisions, and draft paths. |
 | Reading Figma screenshots and variables in this thread | Send them to a subagent that returns only the values the change needs. |
-| Opening the PR and stopping there | Suggest a reviewer, unless the repo has nobody else reviewing. |
+| Opening the PR and stopping there | Suggest a reviewer, unless the repo has nobody else reviewing, and start the next PR in the stack, if there is one. |
+| Listing the next PR in the stack as "not started" | Start it in a new top-level thread once this PR is open (step 11). |
 | Requesting a review without asking | Name the pick and the reason, and request it once the user confirms. |
