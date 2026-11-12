@@ -172,7 +172,8 @@ hand-back.
 
 When the plan splits into more than one PR, such as a stack or a set of PRs that each
 cover part of the issue, finish PR 1 in this thread through the hand-back (step 9). Once
-its PR is open, start the next PR in a new top-level thread, not a child of this one:
+its PR is open, propose the next PR to the user (step 11). When they approve, start it in
+a new top-level thread, not a child of this one:
 
 ```bash
 ~/.claude/scripts/start-branch-thread <branch> --base <parent-branch> --prompt-file - <<'EOF'
@@ -185,10 +186,10 @@ archive this thread once PR 1 is done while the later PRs are still in progress.
 
 `<parent-branch>` is the branch the PR stacks on, or the default branch when the PRs are
 independent. For a stack, start only the next PR, since its branch needs this one's
-commits; that thread starts the one after it once its own PR is open, and so on down
+commits; that thread proposes the one after it once its own PR is open, and so on down
 the stack. This step applies to every thread in the stack, not only the one that split the
-plan: a thread started for PR 2 of 3 starts PR 3 (step 11). For independent PRs, start them all at once. The new thread knows only what its
-prompt says, so the prompt states:
+plan: a thread started for PR 2 of 3 proposes PR 3 (step 11). For independent PRs, propose
+them all at once. The new thread knows only what its prompt says, so the prompt states:
 
 - that PR's scope: what it changes, and what it leaves to the other PRs
 - the decisions already made, such as the testing strategy, edge-case handling, rollout
@@ -196,7 +197,8 @@ prompt says, so the prompt states:
 - the absolute paths of any drafts, such as the PR description for PR 1, and the URLs
   of the PRs already open
 - for a stack, the PRs still to come after it, with the scope of each, and that it
-  starts the next one in a new top-level thread once its own PR is open
+  proposes the next one once its own PR is open, and starts it in a new top-level thread
+  when the user approves
 
 Tell it to use the `work-on` skill, so it posts its own plan and hands back its own PR.
 Link each new thread in the hand-back as `@thread:<id>`, so the user can find it after
@@ -297,15 +299,28 @@ when it already has a reviewer, or when nobody but the user reviews PRs in the r
    gh pr edit <n> --add-reviewer <login>
    ```
 
-## 11. Start the next PR in a stack
+## 11. Propose the next PR in a stack
 
-When this thread's PR is one of a stack and more PRs follow it, start the next one as
-soon as this PR is open, as step 7 describes. Check the issue's plan and this thread's
-prompt for the PRs still to come. Base the new branch on this PR's branch, or on the
-default branch if the PRs below it have merged and the next PR doesn't need this one's
-commits. Don't hold it back for decisions the next PR leaves open: its own thread brings
-them to the user in its plan. Link it in the reply as `@thread:<id>`. Skip this step when
-this PR is the last in the stack.
+When this thread's PR is one of a stack and more PRs follow it, propose the next one as
+soon as this PR is open, and start its thread only after the user approves. Check the
+issue's plan and this thread's prompt for the PRs still to come. The proposal states:
+
+- the branch name and its base: this PR's branch, or the default branch if the PRs below
+  it have merged and the next PR doesn't need this one's commits
+- the scope: what it changes, and what it leaves to the PRs after it
+- the plan: the approach, the tests, the edge cases it handles, and the decisions its
+  thread will bring to the user
+
+When `bb impromptu-ui help` succeeds, load the `impromptu-ui` skill and publish one card
+under the key `work-on-next-pr`. Its title is "Start PR <n> of <total>: <short scope>?",
+its `draft` is the proposal, so the user can edit it, and its answers are "Start PR <n>"
+(`primary`, with `{draft}` in the message it sends back) and "Not yet". Without the
+plugin, post the proposal in chat and end on the question.
+
+When the user approves, start the thread as step 7 describes, using the proposal with any
+edits the user made, then publish the card again under the same key with the new thread
+linked as `@thread:<id>`. When they answer "Not yet", leave the card as it is and don't
+start the thread. Skip this step when this PR is the last in the stack.
 
 ## Common mistakes
 
@@ -319,8 +334,9 @@ this PR is the last in the stack.
 | Assuming merging is the whole release | Check for migrations, deploy order, settings outside the code, and anything a revert won't undo. |
 | Building one visual design without showing options | Use `iterate-design` unless a Figma or high-fidelity design exists. |
 | Starting a review the user didn't ask for | Offer it above the composer and run it only on a yes. |
-| Building every PR of a stack in one thread, moving between worktrees | Finish PR 1 here, then start the next PR in a new top-level thread with `start-branch-thread`, without `--parent-self`, and a prompt that carries the scope, decisions, and draft paths. |
+| Building every PR of a stack in one thread, moving between worktrees | Finish PR 1 here, then, once the user approves, start the next PR in a new top-level thread with `start-branch-thread`, without `--parent-self`, and a prompt that carries the scope, decisions, and draft paths. |
 | Reading Figma screenshots and variables in this thread | Send them to a subagent that returns only the values the change needs. |
-| Opening the PR and stopping there | Suggest a reviewer, unless the repo has nobody else reviewing, and start the next PR in the stack, if there is one. |
-| Listing the next PR in the stack as "not started" | Start it in a new top-level thread once this PR is open (step 11). |
+| Opening the PR and stopping there | Suggest a reviewer, unless the repo has nobody else reviewing, and propose the next PR in the stack, if there is one. |
+| Listing the next PR in the stack as "not started" | Propose it in a card once this PR is open (step 11). |
+| Starting the next PR's thread without asking | Propose it with its branch, scope, and plan, and start it once the user approves. |
 | Requesting a review without asking | Name the pick and the reason, and request it once the user confirms. |
