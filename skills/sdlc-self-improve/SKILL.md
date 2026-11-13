@@ -45,9 +45,11 @@ Run this skill in a fresh thread, from a checkout of the repo, so reviewers can 
    ```
    Each suggestion becomes a card with its impact, why the fix works, evidence, and the issue body as a draft the user can edit. In chat, say how many pull requests were scanned and reviewed, how many suggestions there are, the limiting step, and the top three by impact, and point to the cards. Do not repeat the list. If `publish` prints a validation error, fix `findings.json` and run both commands again. If `bb impromptu-ui` is not available, write the cards to `findings.md` in the output directory, show it numbered, and ask which to draft.
 
-6. **When the user presses Draft issue**, the message carries the issue title and the body as they edited it. Load `draft-issue-description` and follow its rules for the body: prose context with no headings, then considerations, then the `**Done is:**` list. Write it to `~/projects/drafts/issue-<repo>-<slug>.md`, with the title as the first line (`# <title>`), and link it by absolute path. Set the finding's `state.draftPath` in `findings.json` and republish with the same two commands; the card then shows the draft and a **File issue** button. Do not file anything yet.
+6. **When the user presses Draft issue**, the message carries the issue title and the body as they edited it. Load `draft-issue-description` and follow its rules for the body: prose context with no headings, then considerations, then the `**Done is:**` list. Write it to `~/projects/drafts/issue-<repo>-<slug>.md`, with the title as the first line (`# <title>`), and link it by absolute path. Set the finding's `state.draftPath` in `findings.json` and republish with the same two commands; the card then shows the draft and a **File issue** button. If the draft file exists when Revise is pressed later, rewrite it too. Do not file anything yet.
 
-7. **When the user presses File issue**, create it from the draft file, which they may have edited:
+7. **When the user presses Revise**, the message carries their note and the issue body as they left it. Change the suggestion to match: its title, fix, target, basis, or issue body in `findings.json`, checking the repo or `data.json` when the note questions a fact. Keep the user's edits to the body unless the note asks otherwise. If the note shows the suggestion is wrong, move it to `observations` with the reason. If the change alters the cited ids, run `measure_findings.py` again. Republish with the same two commands, and reply in one line saying what changed.
+
+8. **When the user presses File issue**, create it from the draft file, which they may have edited:
    ```bash
    gh issue create --repo <repo> --title "<first line without '# '>" --body "$(tail -n +3 <draft>)"
    ```

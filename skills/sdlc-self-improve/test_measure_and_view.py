@@ -90,8 +90,12 @@ class ViewTest(unittest.TestCase):
         self.assertIn("**Issue:** Format staged files", item["summary"])
         self.assertEqual(item["draftLabel"], "Issue body")
         self.assertEqual(item["draft"], "Body.\n\n**Done is:**\n- it runs")
-        [action] = item["actions"]
+        action, revise = item["actions"]
         self.assertEqual((action["type"], action["label"]), ("message", "Draft issue"))
+        self.assertEqual(revise["label"], "Revise")
+        self.assertIn("{note}", revise["text"])
+        self.assertIn("{draft}", revise["text"])
+        self.assertEqual(item["note"]["label"], "Revise")
         self.assertIn("{draft}", action["text"])
         # Impromptu UI rejects {note} on an item with no note field.
         self.assertNotIn("{note}", action["text"])
@@ -106,7 +110,7 @@ class ViewTest(unittest.TestCase):
     def test_drafted_finding_offers_file_issue(self):
         item = self.view(state={"draftPath": "/Users/x/projects/drafts/issue-widgets-format.md"})["sections"][0]["items"][0]
         self.assertEqual(item["status"]["label"], "Draft ready")
-        self.assertEqual([a["label"] for a in item["actions"]], ["File issue", "Redraft"])
+        self.assertEqual([a["label"] for a in item["actions"]], ["File issue", "Redraft", "Revise"])
         self.assertIn("(/Users/x/projects/drafts/issue-widgets-format.md)", item["details"])
 
     def test_filed_finding_is_complete_and_links_the_issue(self):
@@ -114,6 +118,7 @@ class ViewTest(unittest.TestCase):
         self.assertEqual(item["status"], {"label": "Filed", "tone": "success", "complete": True})
         self.assertEqual(item["url"], "https://github.com/octo/widgets/issues/5")
         self.assertNotIn("actions", item)
+        self.assertNotIn("note", item)
 
 
 class FeedbackByPersonTest(unittest.TestCase):

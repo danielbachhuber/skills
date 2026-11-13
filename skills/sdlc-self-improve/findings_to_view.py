@@ -63,6 +63,9 @@ def card(position, finding, repo):
         "draftLabel": "Issue body",
     }
     state = finding.get("state") or {}
+    if not state.get("issueUrl"):
+        item["note"] = {"label": "Revise",
+                        "placeholder": "What to change: the fix, the target, the issue, or why it's wrong"}
     if state.get("issueUrl"):
         item["url"] = state["issueUrl"]
         item["status"] = {"label": "Filed", "tone": "success", "complete": True}
@@ -74,10 +77,19 @@ def card(position, finding, repo):
             "type": "message", "label": "File issue", "primary": True,
             "detail": f"Creates the issue on {repo} from the draft file",
             "text": f"File the issue for {item['id']} ({finding['title']}) on {repo} from {state['draftPath']}.",
-        }, redraft_action(item, finding, repo, "Redraft")]
+        }, redraft_action(item, finding, repo, "Redraft"), revise_action(item, finding, repo)]
         return item
-    item["actions"] = [redraft_action(item, finding, repo, "Draft issue", primary=True)]
+    item["actions"] = [redraft_action(item, finding, repo, "Draft issue", primary=True), revise_action(item, finding, repo)]
     return item
+
+
+def revise_action(item, finding, repo):
+    return {
+        "type": "message", "label": "Revise", "repeat": True,
+        "detail": "Sends your note back to revise this suggestion and its issue body, then republishes the card",
+        "text": (f"Revise {item['id']} ({finding['title']}) on {repo}: {{note}}\n\n"
+                 f"The issue body as I left it:\n\n{{draft}}"),
+    }
 
 
 def redraft_action(item, finding, repo, label, primary=False):
