@@ -1,9 +1,9 @@
 ---
-name: self-improve
+name: self-improve-bb
 description: Use when the user asks to review the past week of bb threads for improvements, run a self-improvement or retrospective pass over recent agent work, or find where threads needed too much correction, took too many steps, burned tokens or tool calls, or would have gone faster with a non-chat UI.
 ---
 
-# Self-improve
+# Self-improve (bb)
 
 ## Overview
 
@@ -15,7 +15,7 @@ Run this skill in a fresh thread. Started in a thread already holding work, ever
 
 1. **Collect transcripts.**
    ```bash
-   python3 ~/.claude/skills/self-improve/collect-threads.py --days 7
+   python3 ~/.claude/skills/self-improve-bb/collect-threads.py --days 7
    ```
    Use the number of days the user or the prompt gives, at most 30. The script scores each thread from `bb tokenomics threads` when the Tokenomics plugin is installed, or from every thread's event log when it is not (slower, and without turn times or subagent tokens), and selects the top 30 (`--top` to change), at most 2 per plugin so routine sweeps do not crowd the list. The last line is the output directory. `index.tsv` there lists every scored thread; rows with `selected` set to `yes` have a batch number and are the only ones reviewed. Each selected thread has a trimmed transcript (`<id>.txt`) and a digest of its scoring numbers, tokens, tool calls, and a numbered table of its turns with each turn's model calls, tokens, and time (`<id>.tools.txt`). Findings cite calls by those turn numbers. `tool-summary.md` has tool patterns across the threads whose logs were read, and `slow-commands.json`, written only with Tokenomics, is `bb tokenomics commands` for the same days. Mention any warning the script prints.
 
@@ -34,7 +34,7 @@ Run this skill in a fresh thread. Started in a thread already holding work, ever
 
 4. **Write `findings.json`** in the output directory, in the shape below. Turn each reviewer's `Removes:` line into `removes` entries and its `Basis:` line into `estimatedSavings.basis`; when findings merge, keep every entry. Then price them:
    ```bash
-   python3 ~/.claude/skills/self-improve/price_findings.py <output-dir>/findings.json
+   python3 ~/.claude/skills/self-improve-bb/price_findings.py <output-dir>/findings.json
    ```
    It fills in `totalCost` and `estimatedSavings` from the Tokenomics database and the Claude Code transcripts, and prints one line per finding. Fix any `warning` about a turn it could not find. Do not estimate the numbers yourself; a finding the script cannot price shows "not priced". When pricing changes the ranking, rank by recurrence, then estimated savings.
 
@@ -44,8 +44,8 @@ Run this skill in a fresh thread. Started in a thread already holding work, ever
    ```
    **If it is**, turn the findings into a view and publish it from this thread:
    ```bash
-   python3 ~/.claude/skills/self-improve/findings_to_view.py <output-dir>/findings.json > <output-dir>/view.json
-   bb impromptu-ui publish --file <output-dir>/view.json --key self-improve
+   python3 ~/.claude/skills/self-improve-bb/findings_to_view.py <output-dir>/findings.json > <output-dir>/view.json
+   bb impromptu-ui publish --file <output-dir>/view.json --key self-improve-bb
    ```
    Each finding becomes a card with its evidence and an **Open thread** button that starts the fix in the finding's project, titled `Improve: <title>`. In chat, say how many threads were scored and how many were read, how many findings there are, name the top five, and point to the side panel. Do not repeat the list or open threads yourself. If `publish` prints a validation error, fix `findings.json` and run both commands again.
 

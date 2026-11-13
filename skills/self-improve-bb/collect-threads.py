@@ -104,7 +104,7 @@ def main():
     opts = parser.parse_args()
 
     today = datetime.date.today().isoformat()
-    out = opts.out or f"/tmp/self-improve-{today}"
+    out = opts.out or f"/tmp/self-improve-bb-{today}"
     os.makedirs(out, exist_ok=True)
 
     listed = {t["id"]: t for t in json.loads(bb("thread", "list", "--json"))}

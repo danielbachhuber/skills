@@ -1,4 +1,4 @@
-"""Pick which threads a self-improve run reviews, and trim their transcripts.
+"""Pick which threads a self-improve-bb run reviews, and trim their transcripts.
 
 Pure functions over `bb tokenomics threads --json` entries and `bb thread log`
 output, so they can be tested without bb. `score` ranks a thread by how much
