@@ -1,6 +1,6 @@
 # Reviewer prompt
 
-Send this to each batch reviewer subagent, filling in `{{DIR}}`, `{{REPO}}`, `{{CHECKOUT}}`, and `{{BATCH}}`, and replacing `{{PRS}}` with the contents of `{{DIR}}/batch-{{BATCH}}.md`.
+`collect-repo.py` fills this in for each batch as `prompt-<n>.md` in its output directory: `{{DIR}}`, `{{REPO}}`, `{{CHECKOUT}}`, `{{BATCH}}`, `{{REPORT}}`, and `{{PRS}}`, the contents of `batch-<n>.md`.
 
 ---
 
@@ -8,7 +8,7 @@ You are reviewing a week of pull requests in the GitHub repo `{{REPO}}` to find 
 
 {{PRS}}
 
-Each has a digest at `{{DIR}}/pr-<number>.md`: its timings, this week's reviews, every review and conversation comment with its id in brackets (`[2841234567]`), and its failed CI runs with the failing job and step. The repo's current files are in `{{CHECKOUT}}`.
+Each has a digest at `{{DIR}}/pr-<number>.md`: its timings, this week's reviews, every review and conversation comment with its id in brackets (`[2841234567]`), and its failed CI runs with the failing job, step, and the error it printed. The repo's current files are in `{{CHECKOUT}}`.
 
 Do not change files, comment on GitHub, or open issues.
 
@@ -35,7 +35,7 @@ For each finding, pick the cheapest fix that would have stopped it, in this orde
 
 Before reporting a finding, check in one shell command that the problem is still there and not already tracked: `grep -n` the target file in `{{CHECKOUT}}`, and `gh issue list --repo {{REPO}} --state open --search "<two or three keywords>"`. Drop the finding if the fix has landed. If an open issue covers it, report it anyway and name the issue on the `Tracked:` line.
 
-Report at most 5 findings, the ones that recur most, in under 700 words. Your final message is the report, with each finding in this shape:
+Report at most 5 findings, the ones that recur most, in under 700 words. Write the report to `{{REPORT}}` with a shell heredoc, then reply with only that path; if you cannot write files, reply with the report itself. Each finding takes this shape:
 
 ```
 ### <imperative title, under 70 characters>
@@ -51,7 +51,7 @@ Evidence:
 > <verbatim comment text or failing step> (#<PR>, <comment or run id>, <author>)
 Issue title: <the GitHub issue's title>
 Issue body:
-<the issue body, in markdown: no headings. Open with prose on what keeps happening and what it costs, citing PR numbers. Then what to change, in which files. Then a bulleted list of considerations if there are any. End with a "**Done is:**" line and a short bulleted list of concrete, checkable completion criteria. It must make sense to someone who has not read these pull requests.>
+<the issue body, in markdown: no headings. Open with prose on what keeps happening and what it costs, citing PR numbers. Then what to change, in which files. Then a bulleted list of considerations if there are any. End with a "**Done is:**" line and a short bulleted list of concrete, checkable completion criteria. It must make sense to someone who has not read these pull requests. Refer to every pull request in the issue body as its full title and number in one link, `[<title> (#<n>)](<url>)`, which the digest's first two lines give you.>
 ```
 
 Do not count or estimate impact; a script measures it from the ids you cite. Cite every id that shows the problem, since the ids are the measure.

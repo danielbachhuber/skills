@@ -25,17 +25,20 @@ TONES = {
 
 
 def quote_line(e):
+    """A quote with its source. Flow evidence has no author and may have no PR."""
     text = " ".join(e["quote"].split())
-    source = f"[#{e['pr']}]({e['url']})" if e.get("url") else f"#{e['pr']}"
-    who = f"{e['author']}, " if e.get("author") else ""
-    return f"> {text}\n>\n> {who}{source}"
+    label = f"#{e['pr']}" if e.get("pr") else "source"
+    source = f"[{label}]({e['url']})" if e.get("url") else (label if e.get("pr") else "")
+    attribution = ", ".join(part for part in (e.get("author"), source) if part)
+    return f"> {text}" + (f"\n>\n> {attribution}" if attribution else "")
 
 
 def card(position, finding, repo):
     evidence = finding.get("evidence") or []
     impact = finding.get("impact") or {}
     prs = impact.get("prs", 0)
-    summary = [f"**Impact:** {finding.get('impactLine', 'not measured')}"]
+    summary = [f"**Impact:** {finding.get('impactLine', 'not measured')}",
+               f"**Issue:** {finding['issue']['title']}"]
     if finding.get("basis"):
         summary.append(f"**Why the fix works:** {finding['basis']}")
     if evidence:
@@ -57,7 +60,7 @@ def card(position, finding, repo):
         "summary": "\n\n".join(summary),
         "details": "\n".join(details),
         "draft": finding["issue"]["body"].strip(),
-        "draftLabel": f"Issue body · {finding['issue']['title']}",
+        "draftLabel": "Issue body",
     }
     state = finding.get("state") or {}
     if state.get("issueUrl"):

@@ -19,13 +19,18 @@ Run this skill in a fresh thread, from a checkout of the repo, so reviewers can 
    ```bash
    python3 ~/.claude/skills/sdlc-self-improve/collect-repo.py --days 7
    ```
-   Add `--repo owner/name` when the checkout's `origin` is not the repo. Use the number of days the user gives, at most 30. It takes about a minute. The script scans every author's pull requests updated in the window and counts only comments and reviews made inside it. It picks at most 40 pull requests with review feedback or failed CI (`--top` to change), busiest first, and splits them into batches of 8. The last line is the output directory. `flow.md` there has the repo-wide numbers; `batch-<n>.md` lists each batch; `pr-<n>.md` is one digest per picked pull request; `data.json` has everything. Mention any warning it prints: a source it could not check (no GitHub Actions runs, not run from a checkout) must be reported as not checked, never as clean.
+   Add `--repo owner/name` when the checkout's `origin` is not the repo. Use the number of days the user gives, at most 30. It takes about a minute. The script scans every author's pull requests updated in the window and counts only comments and reviews made inside it. It picks at most 40 pull requests with review feedback or failed CI (`--top` to change), busiest first, and splits them into batches of 8. The last line is the output directory. `flow.md` there has the repo-wide numbers; `batch-<n>.md` lists each batch; `pr-<n>.md` is one digest per picked pull request, with the error each failed CI job printed; `prompt-<n>.md` and `prompt-flow.md` are the reviewers' filled-in prompts; `data.json` has everything. Mention any warning it prints: a source it could not check (no GitHub Actions runs, not run from a checkout) must be reported as not checked, never as clean.
 
    Each reviewer costs roughly 60k to 100k tokens. State the batch count. If it is over 6, ask whether to go ahead or rerun with a lower `--top`, and wait for the answer.
 
-2. **Review in parallel.** In one message, dispatch one subagent per batch with the prompt in `reviewer-prompt.md` (fill in `{{DIR}}`, `{{REPO}}`, `{{CHECKOUT}}` from `data.json`'s `checkout`, `{{BATCH}}`, and paste in `batch-<n>.md` for `{{PRS}}`), plus one with `flow-reviewer-prompt.md` (fill in `{{DIR}}`, `{{REPO}}`, `{{CHECKOUT}}`). Keep the digests out of your own context. Save each returned report as `report-<batch>.md` or `report-flow.md` in the output directory. If a reviewer hit its call limit, list the pull requests it skipped as one observation; do not send another reviewer.
+2. **Review in parallel.** In one message, dispatch one subagent per `prompt-<n>.md` and one for `prompt-flow.md`, each with the prompt `Read <output-dir>/prompt-<n>.md and do what it says.` Each writes its report to `report-<n>.md` or `report-flow.md` in the output directory and replies with the path. If a reply holds the report instead, save it there yourself. Keep the digests out of your own context. If a reviewer hit its call limit, list the pull requests it skipped as one observation; do not send another reviewer.
 
 3. **Merge.** Combine findings that share a target and a cause, and union their ids. A batch reviewer and the flow reviewer often reach the same CI fix from different sides; keep one finding with both sets of ids and evidence. A pattern seen in two batches is stronger than either alone, so merging is where most recurrence shows up. Drop a finding whose only evidence is one comment on one pull request; it goes under `observations`.
+
+   Reviewers' run lists for the same CI failure differ and can hold a mistyped id. When merging CI findings, take the run ids from `data.json` instead, selecting by workflow, job, and the error text that defines the finding:
+   ```bash
+   jq '[.ci.failures[] | select(any(.jobs[]?; .job == "<job>" and any(.error[]?; test("<pattern>")))) | .id]' <output-dir>/data.json
+   ```
 
 4. **Write `findings.json`** in the output directory, in the shape below, then measure it:
    ```bash
@@ -74,7 +79,7 @@ Run this skill in a fresh thread, from a checkout of the repo, so reviewers can 
 }
 ```
 
-`signal` is one of `repeated review feedback`, `CI friction`, `rework`, `escaped defect`, `review wait`. `fix` is one of `lint rule`, `CI change`, `test`, `agent instructions`, `PR template`, `docs`, `process`. `refs` holds the reviewers' `Comments`, `CI runs`, and `PRs` lines as numbers; `reverts` and `bugs` hold commit SHAs and issue numbers from `flow.md`. `prs` counts toward review-wait hours only when `signal` is `review wait`. `tracked` is the reviewer's `Tracked:` line, empty when none. `constraint` is the flow reviewer's last line. `evidence` URLs come from the digest's comment or run. `measure_findings.py` adds `impact` and `impactLine`. `state` starts empty; steps 6 and 7 fill in `draftPath` and `issueUrl`. At most 20 findings.
+`signal` is one of `repeated review feedback`, `CI friction`, `rework`, `escaped defect`, `review wait`. `fix` is one of `lint rule`, `CI change`, `test`, `agent instructions`, `PR template`, `docs`, `process`. `refs` holds the reviewers' `Comments`, `CI runs`, and `PRs` lines as numbers; `reverts` and `bugs` hold commit SHAs and issue numbers from `flow.md`. `prs` counts toward review-wait hours only when `signal` is `review wait`. `tracked` is the reviewer's `Tracked:` line, empty when none. Evidence from a review comment or CI run has its `url` and `author`; evidence from the flow numbers leaves out `author`, and leaves out `pr` and `url` when it is about no single pull request. `constraint` is the flow reviewer's last line. `evidence` URLs come from the digest's comment or run. `measure_findings.py` adds `impact` and `impactLine`. `state` starts empty; steps 6 and 7 fill in `draftPath` and `issueUrl`. At most 20 findings.
 
 ## Common mistakes
 

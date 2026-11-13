@@ -29,7 +29,7 @@ def index(data):
     return comments, runs, prs
 
 
-def measure(finding, comments, runs, prs):
+def measure(finding, comments, runs, prs, days=7):
     refs = finding.get("refs") or {}
     warnings = []
     cited = []
@@ -71,11 +71,24 @@ def measure(finding, comments, runs, prs):
         "reworkPrs": len(rework),
         "ciFailures": len(failed),
         "ciMinutes": sum(f["minutes"] for f in failed),
-        # Waiting counts only for review-wait findings, where it is the cost.
-        "hoursWaiting": round(sum(pr["hoursWaiting"] or 0 for pr in named), 1) if signal == "review wait" else 0,
+        # Waiting counts only for review-wait findings, where it is the cost. Waits run
+        # side by side, so the measure is how many PRs waited, not the sum of hours.
+        **wait_impact(named if signal == "review wait" else [], days),
         "reverts": len(refs.get("reverts") or []),
         "bugs": len(refs.get("bugs") or []),
     }, warnings
+
+
+def wait_impact(waiting, days):
+    return {
+        "waitingPrs": len(waiting),
+        "wholeWindow": sum(1 for pr in waiting if (pr["hoursWaiting"] or 0) >= days * 24 - 1),
+        "longestWaitHours": max((pr.get("hoursWaitingTotal", pr["hoursWaiting"]) or 0 for pr in waiting), default=0),
+    }
+
+
+def duration(h):
+    return f"{round(h)}h" if h < 48 else f"{h / 24:.0f} days"
 
 
 def describe(impact, days):
@@ -90,8 +103,13 @@ def describe(impact, days):
     if impact["ciFailures"]:
         parts.append(f"{impact['ciFailures']} failed CI run{'s' * (impact['ciFailures'] != 1)} "
                      f"({impact['ciMinutes']} min)")
-    if impact["hoursWaiting"]:
-        parts.append(f"{round(impact['hoursWaiting']):,}h waiting for review")
+    if impact.get("waitingPrs"):
+        whole = impact["wholeWindow"]
+        period_word = "week" if days == 7 else f"{days} days"
+        text = f"{impact['waitingPrs']} PR{'s' * (impact['waitingPrs'] != 1)} waiting for a first review"
+        if whole:
+            text += f", {whole} of them all {period_word}"
+        parts.append(text + f", the oldest for {duration(impact['longestWaitHours'])}")
     if impact["reverts"]:
         parts.append(f"{impact['reverts']} revert{'s' * (impact['reverts'] != 1)}")
     if impact["bugs"]:
@@ -106,13 +124,17 @@ def describe(impact, days):
 
 
 def rank_key(finding):
-    """Recurrence first, then the cost a person or CI paid."""
-    impact = finding.get("impact") or {}
-    return (
-        impact.get("prs", 0),
-        impact.get("comments", 0) + impact.get("ciFailures", 0) + impact.get("reworkPrs", 0),
-        impact.get("hoursWaiting", 0) + impact.get("ciMinutes", 0) / 60,
-    )
+    """One score: recurrence across PRs, plus what people and CI paid for it.
+
+    A PR touched or reworked counts 2, a review comment 1, a failed CI run 0.5
+    plus a point per 10 minutes it ran, a PR that waited the whole window 2, and
+    a revert or bug 5. Concentrated CI cost on one PR can then outrank a few
+    comments spread over several.
+    """
+    i = finding.get("impact") or {}
+    return (2 * i.get("prs", 0) + i.get("comments", 0) + 2 * i.get("reworkPrs", 0)
+            + 0.5 * i.get("ciFailures", 0) + i.get("ciMinutes", 0) / 10
+            + 2 * i.get("wholeWindow", 0) + 5 * (i.get("reverts", 0) + i.get("bugs", 0)))
 
 
 def main(path):
@@ -122,7 +144,7 @@ def main(path):
         data = json.load(f)
     comments, runs, prs = index(data)
     for finding in findings["findings"]:
-        finding["impact"], warnings = measure(finding, comments, runs, prs)
+        finding["impact"], warnings = measure(finding, comments, runs, prs, data["days"])
         finding["impactLine"] = describe(finding["impact"], data["days"])
         for w in warnings:
             print(f"warning: {finding['title']}: {w}", file=sys.stderr)

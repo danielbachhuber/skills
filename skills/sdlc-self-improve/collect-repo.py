@@ -10,16 +10,20 @@ Writes, in the output directory (printed on the last line):
   pr-<n>.md     one digest per pull request picked for review: timings, review
                 comments with their ids, and failed CI runs
   batch-<n>.md  the pull requests in each reviewer batch
+  prompt-<n>.md, prompt-flow.md
+                each reviewer's filled-in prompt
   flow.md       repo-wide numbers: waits, CI failures by workflow, reverts, bugs
 """
 
 import argparse
+import re
 import datetime as dt
 import json
 import os
 import statistics
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 # Bots whose comments are reports, not review. Bot reviewers such as Copilot
 # or Claude are kept: what they flag is review feedback like anyone's.
@@ -181,6 +185,8 @@ def normalize_pr(raw, since, now):
         "hoursToFirstHumanReview": hours(ready, first_human) if ready and first_human else None,
         # Hours the PR sat ready with no human review, within the window.
         "hoursWaiting": hours(max(ready, since), end_of_wait) if ready and end_of_wait > max(ready, since) else 0,
+        # The whole wait, including before the window, for PRs still unreviewed or reviewed in it.
+        "hoursWaitingTotal": hours(ready, end_of_wait) if ready and end_of_wait > max(ready, since) else 0,
         "hoursReadyToMerge": hours(ready, merged) if ready and merged else None,
         "rounds": sum(1 for r in reviews if r["inWindow"] and r["followedByCommit"]
                       and r["state"] in ("CHANGES_REQUESTED", "COMMENTED")),
@@ -210,6 +216,22 @@ def fetch_runs(repo, since):
     return first.get("total_count", 0), runs
 
 
+def error_excerpt(repo, job_id):
+    """What the failing job printed: its error annotations, else the end of its log."""
+    notes = gh_json("api", f"repos/{repo}/check-runs/{job_id}/annotations", check=False) or []
+    messages = [f"{a['path']}: {a['message']}" if a.get("path") and a["path"] != ".github" else a["message"]
+                for a in notes if a.get("annotation_level") == "failure"
+                and not a["message"].startswith("Process completed with exit code")]
+    if messages:
+        return [m[:300] for m in messages[:8]]
+    log = gh("api", "--allow-escape-sequences", f"repos/{repo}/actions/jobs/{job_id}/logs", check=False)
+    lines = [re.sub(r"\x1b\[[0-9;]*m", "", re.sub(r"^\S+Z ", "", line)).rstrip() for line in log.splitlines()]
+    end = next((i for i in range(len(lines) - 1, -1, -1) if "Process completed with exit code" in lines[i]), len(lines))
+    tail = [line for line in lines[max(0, end - 25):end]
+            if line.strip() and not line.startswith(("##[", "[ELIFECYCLE]"))]
+    return [line[:300] for line in tail[-15:]]
+
+
 def failed_jobs(repo, run_id):
     data = gh_json("api", f"repos/{repo}/actions/runs/{run_id}/jobs?filter=all&per_page=100", check=False) or {}
     out = []
@@ -217,7 +239,7 @@ def failed_jobs(repo, run_id):
         if job.get("conclusion") != "failure":
             continue
         steps = [s["name"] for s in job.get("steps") or [] if s.get("conclusion") == "failure"]
-        out.append({"job": job["name"], "steps": steps,
+        out.append({"job": job["name"], "steps": steps, "error": error_excerpt(repo, job["id"]),
                     "minutes": minutes(parse_time(job.get("started_at")), parse_time(job.get("completed_at")))})
     return out
 
@@ -235,8 +257,9 @@ def normalize_runs(repo, total, raw_runs, prs):
             "pr": pr, "sha": run.get("head_sha"), "attempt": run.get("run_attempt", 1), "url": run["html_url"], "at": run["run_started_at"],
             "minutes": minutes(parse_time(run["run_started_at"]), parse_time(run["updated_at"])),
         })
-    for failure in failures[:80]:
-        failure["jobs"] = failed_jobs(repo, failure["id"])
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        for failure, jobs in zip(failures[:80], pool.map(lambda f: failed_jobs(repo, f["id"]), failures[:80])):
+            failure["jobs"] = jobs
     return {"total": total, "reruns": reruns, "failures": failures, "jobsFetched": min(len(failures), 80)}
 
 
@@ -307,7 +330,21 @@ def pr_digest(pr):
         for f in pr["ciFailures"]:
             jobs = "; ".join(f"{j['job']} ({', '.join(j['steps']) or 'no step named'})" for j in f.get("jobs", []))
             lines.append(f"- run {f['id']} · {f['workflow']} · attempt {f['attempt']} · {f['minutes']} min · {jobs}")
+            for j in f.get("jobs", []):
+                lines += [f"  > {line}" for line in j.get("error", [])[:10]]
     return "\n".join(lines) + "\n"
+
+
+ERROR_WORDS = re.compile(r"error|fail|✗|×|unused|expected|not found|cannot|missing", re.I)
+
+
+def headline(error):
+    """The excerpt line most likely to say what broke."""
+    return next((line.strip() for line in error if ERROR_WORDS.search(line)), error[-1].strip())
+
+
+def days_text(h):
+    return f"{h:g}h" if h < 48 else f"{h / 24:.0f} days"
 
 
 def median(values):
@@ -322,26 +359,29 @@ def flow_report(repo, days, prs, ci, reverts, bugs):
                       and pr["hoursToFirstHumanReview"] is None), key=lambda pr: pr["hoursWaiting"], reverse=True)
     by_workflow = {}
     for f in ci["failures"]:
-        entry = by_workflow.setdefault(f["workflow"], {"failures": 0, "minutes": 0, "prs": set(), "jobs": {}})
+        entry = by_workflow.setdefault(f["workflow"], {"failures": 0, "minutes": 0, "prs": set(), "jobs": {}, "sample": {}})
         entry["failures"] += 1
         entry["minutes"] += f["minutes"]
         if f["pr"]:
             entry["prs"].add(f["pr"])
         for j in f.get("jobs", []):
-            key = j["job"] + (f" › {', '.join(j['steps'])}" if j["steps"] else "")
+            key = j["job"] + (f" › {', '.join(j['steps'])}" if j["steps"] else "")[:120]
             entry["jobs"][key] = entry["jobs"].get(key, 0) + 1
+            if j.get("error"):
+                entry["sample"].setdefault(key, headline(j["error"]))
     lines = [f"# Flow for {repo}, last {days} days", "",
              f"- Pull requests updated: {len(prs)} ({len(prs) - len(humans)} by bots)",
              f"- Merged (human-authored): {len(merged)}",
              f"- Median hours from ready to first review (any): {median(pr['hoursToFirstReview'] for pr in humans)}",
              f"- Median hours from ready to first human review: {median(pr['hoursToFirstHumanReview'] for pr in humans)}",
              f"- Median hours from ready to merge: {median(pr['hoursReadyToMerge'] for pr in merged)}",
-             f"- Median review rounds answered with commits: {median(pr['rounds'] for pr in merged)}",
+             f"- Merged PRs with at least one review round answered with commits: "
+             f"{sum(1 for pr in merged if pr['rounds'])} of {len(merged)}",
              f"- CI runs: {ci['total']}, failed: {len(ci['failures'])}, failed runs that were re-runs: {ci['reruns']}",
              f"- Reverts or hotfixes on the default branch: {len(reverts)}",
              f"- Bug issues opened: {len(bugs)}", "",
              "## Waiting longest for a human review", ""]
-    lines += [f"- #{pr['number']} {pr['title']} · {pr['author']} · {pr['hoursWaiting']}h in the window · "
+    lines += [f"- #{pr['number']} {pr['title']} · {pr['author']} · {days_text(pr['hoursWaitingTotal'])} since ready · "
               f"+{pr['size']['additions']}/-{pr['size']['deletions']} · "
               f"waiting on {', '.join(pr['awaitingReviewFrom']) or 'nobody requested'}" for pr in waiting[:10]] or ["- none"]
     load = {}
@@ -356,7 +396,8 @@ def flow_report(repo, days, prs, ci, reverts, bugs):
     lines += ["", "## CI failures by workflow", ""]
     for name, e in sorted(by_workflow.items(), key=lambda kv: kv[1]["failures"], reverse=True):
         lines.append(f"- {name}: {e['failures']} failures, {e['minutes']} min, {len(e['prs'])} PRs")
-        lines += [f"  - {job}: {n}" for job, n in sorted(e["jobs"].items(), key=lambda kv: kv[1], reverse=True)[:5]]
+        for job, n in sorted(e["jobs"].items(), key=lambda kv: kv[1], reverse=True)[:5]:
+            lines.append(f"  - {job}: {n}" + (f"\n    > {e['sample'][job]}" if job in e["sample"] else ""))
     if not by_workflow:
         lines.append("- none" if ci["total"] else "- not checked: no GitHub Actions runs in the window")
     lines += ["", "## Reverts and hotfixes", ""]
@@ -364,6 +405,16 @@ def flow_report(repo, days, prs, ci, reverts, bugs):
     lines += ["", "## Bug issues opened", ""]
     lines += [f"- #{b['number']} {b['title']} ({b['state']})" for b in bugs] or ["- none, or the repo has no `bug` label"]
     return "\n".join(lines) + "\n"
+
+
+def write_prompt(path, template, values):
+    """Fill a reviewer prompt template; the text after its first --- line is the prompt."""
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), template)) as fh:
+        text = fh.read().split("\n---\n", 1)[1]
+    for key, value in values.items():
+        text = text.replace("{{" + key + "}}", value)
+    with open(path, "w") as fh:
+        fh.write(text.lstrip())
 
 
 def checkout(repo):
@@ -419,10 +470,17 @@ def main():
     for n, members in batches.items():
         with open(os.path.join(out, f"batch-{n}.md"), "w") as fh:
             for pr in members:
-                fh.write(f"- PR #{pr['number']} ({pr['author']}): {pr['title']} · {review_comment_count(pr)} comments · "
+                fh.write(f"- [{pr['title']} (#{pr['number']})]({pr['url']}) by {pr['author']} · {review_comment_count(pr)} comments · "
                          f"{pr['rounds']} rounds · {len(pr['ciFailures'])} CI failures · `pr-{pr['number']}.md`\n")
     with open(os.path.join(out, "flow.md"), "w") as fh:
         fh.write(flow_report(repo, args.days, prs, ci, reverts, bugs))
+    values = {"DIR": out, "REPO": repo, "CHECKOUT": checkout(repo) or "(no checkout: skip the file checks)"}
+    for n in batches:
+        with open(os.path.join(out, f"batch-{n}.md")) as fh:
+            write_prompt(os.path.join(out, f"prompt-{n}.md"), "reviewer-prompt.md",
+                         {**values, "BATCH": str(n), "PRS": fh.read(), "REPORT": os.path.join(out, f"report-{n}.md")})
+    write_prompt(os.path.join(out, "prompt-flow.md"), "flow-reviewer-prompt.md",
+                 {**values, "REPORT": os.path.join(out, "report-flow.md")})
 
     comments = sum(review_comment_count(pr) for pr in picked)
     print(f"{len(prs)} pull requests, {len(picked)} with review feedback or failed CI in {len(batches)} batches, "
