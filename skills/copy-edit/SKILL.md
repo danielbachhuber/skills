@@ -11,8 +11,8 @@ change that fixes each problem, one per card, so the author can take or leave ea
 
 It never rewrites sentences into the editor's voice. The editor moves, cuts, and fixes the
 author's own words. Where something is missing, such as a transition or an example, the
-editor describes what the gap needs and leaves the writing to the author, unless the author
-asks for a draft on that card.
+editor proposes the shortest sentence that fills the gap, built from the author's own words
+and notes where possible, as an editable diff the author can rewrite before applying.
 
 This is not `unslop` or `humanizer` (cut AI tells) or `claude-for-nonprofits:content-review`
 (risk). Run those separately if the user wants them.
@@ -133,14 +133,17 @@ Do not make a card for:
 - **Moves**: one change removing the passage, one inserting it where it goes.
 - To delete a whole paragraph, include its trailing blank line in `before`.
 - List a card's changes in the order they apply: deletions first, then insertions.
-- **Gaps and missing examples** have no `changes`. The summary says where the gap is and
-  what it needs to do, such as "Nothing connects 'decisions are the bottleneck' to the
-  'AI-native' heading. A sentence here should say why that bottleneck is what AI-native
-  means here." A gap between paragraphs has no sentence of its own, so say where it goes by
-  quoting the end of the sentence it follows, in the title or the first words of the summary,
-  such as "After 'the bottleneck; doing the work is much less so.'". For a missing example,
-  quote the claim, say what kind of example would back
-  it, and point to a candidate in the author's own notes when there is one.
+- **Gaps and missing examples** get a diff too. The summary says what the gap needs to do,
+  such as "Nothing connects 'decisions are the bottleneck' to the 'AI-native' heading. A
+  sentence here should say why that bottleneck is what AI-native means here." The change
+  anchors on the sentence the new one follows: `before` is that sentence, and the item's
+  `draft` is that sentence plus the proposed addition, with no `after`. Impromptu UI then
+  shows the insertion as a diff with an Edit tab, so the author can rewrite the new sentence
+  in place before applying it. Keep the addition to one or two plain sentences, from the
+  author's own words and notes where possible. For a missing example, quote the claim, say
+  what kind of example would back it, and build the proposed sentence from a candidate in
+  the author's notes; when there is none, propose the sentence with a bracketed blank for
+  the fact only the author knows, such as "[number] procedures".
 
 ## 6. Show the cards
 
@@ -166,15 +169,13 @@ Publish one Impromptu UI view, following the `bb-global-skills:impromptu-ui` ski
     it does, because the user may press them in any order. Quote short spans in full; for a
     long passage, quote its first and last few words.
     - A card with `changes`: Apply (`primary`), Skip, Revise (`"repeat": true`, `{note}`).
-    - A gap, a missing example, or an unclear reference that needs new words, with no
-      `changes`: Noted (`primary`, the author will handle it), Draft it (with `{note}`, so
-      the author can say what the draft should contain; write a suggestion for this card
-      only, then republish it as a card with `changes`), and Skip. Give it a `note` with the
-      placeholder "What the draft should say".
+    - A gap, a missing example, or an unclear reference that needs new words (a `draft`
+      card): Apply (`primary`, with `{draft}` in its text so the author's edits come
+      through), Skip, and Revise (`"repeat": true`, `{note}`).
     - A claim you couldn't verify: Checked, it's right (`primary`), Noted (the author will
       look into it), and Skip. There is nothing to draft.
-  - The section comes from the scale of the problem, the buttons from whether the card has
-    `changes`. An unclear reference is a line-level Suggestion even when fixing it needs new
+  - The section comes from the scale of the problem, the buttons from the kind of card. An
+    unclear reference is a line-level Suggestion even when fixing it needs new
     words.
 - Order cards by importance in Structure and Facts, and in reading order in Fixes and
   Suggestions, so the author can apply them top to bottom.
@@ -186,14 +187,13 @@ above the composer. Don't repeat the read or the cards in chat.
 ## 7. Act on each button
 
 - **Apply**: read the file again, since the author may have kept writing while the cards were
-  open. Replace `before` with `after` and nothing else, using any exact-match replacement
-  (the Edit tool, or a script that first checks `before` occurs exactly once). Match on the
-  text, not line numbers. If `before` is no longer in the file, tell the user and mark
+  open. Replace `before` with `after`, or with the `{draft}` text the button sent for a draft
+  card, and nothing else. Any exact-match replacement works: the Edit tool, or a script that
+  first checks `before` occurs exactly once. Match on the text, not line numbers. If `before` is no longer in the file, tell the user and mark
   the card `{ "label": "Text changed", "tone": "warning" }` rather than guessing.
 - **Skip**, **Noted**, and **Checked, it's right**: change nothing. For Checked, add the
   claim to the read's "checked and correct" paragraph on the next round.
-- **Revise** and **Draft it**: publish the item again under the same `id` with the new
-  suggestion.
+- **Revise**: publish the item again under the same `id` with the new suggestion.
 
 After each one, publish the view again under the same key, with that item's `status` set to
 `{ "label": "Applied", "tone": "success", "complete": true }`, `{ "label": "Skipped",
@@ -215,7 +215,8 @@ A second round publishes under the same key. Before publishing, read the current
 | Mistake | Instead |
 |---|---|
 | "Suggested:" followed by a rewritten paragraph | One card per problem, `after` changed only where the problem is |
-| Writing the missing transition or example yourself | Describe what it needs; draft only when the author presses Draft it |
+| A gap card with only prose and nothing to apply | Propose the sentence as an editable diff anchored on the sentence before it |
+| A long or voice-heavy proposed sentence | One or two plain sentences from the author's own words; brackets for facts only they know |
 | Changing a phrase because you'd say it differently | Leave it. Flag it only if it breaks a rule, is unclear, or is passive with a known actor |
 | Flattening a joke into plain words under the mannered-prose rule | A joke the reader gets is voice, not mannered prose |
 | Merging duplicates into a new paragraph you wrote | Keep the author's fuller version, delete the other |
