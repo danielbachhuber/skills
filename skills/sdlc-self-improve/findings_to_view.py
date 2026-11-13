@@ -21,6 +21,7 @@ TONES = {
     "rework": "warning",
     "repeated review feedback": "info",
     "review wait": "info",
+    "review load": "info",
 }
 
 

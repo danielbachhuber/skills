@@ -30,7 +30,7 @@ For each finding, pick the cheapest fix that would have stopped the request, in 
 | `docs` | A convention people keep missing that no tool can check |
 | `process` | Review load, ownership, or sequencing; name the change |
 
-When one person wrote most of the week's review feedback, that is a load finding of its own, with the fix `process`: a second reviewer for an area, CODEOWNERS, or an agent first pass that handles the requests they make most. Cite the PR numbers they reviewed on the `PRs:` line.
+When one person wrote most of the week's review feedback, that is a load finding of its own, with the signal `review load` and the fix `process`: a second reviewer for an area, CODEOWNERS, or an agent first pass that handles the requests they make most. Put their login on a `Reviewer:` line after `Tracked:`, and the PRs they reviewed on the `PRs:` line.
 
 Before reporting a finding, check in one shell command that the problem is still there and not already tracked: `grep -n` the target file in `{{CHECKOUT}}`, and `gh issue list --repo {{REPO}} --state open --search "<two or three keywords>"`. Drop the finding if the fix has landed. If an open issue covers it, report it anyway and name the issue on the `Tracked:` line.
 
@@ -38,7 +38,7 @@ Report at most 5 findings, the ones that recur most, in under 700 words. Write t
 
 ```
 ### <imperative title, under 70 characters>
-Signal: repeated review feedback | review wait
+Signal: repeated review feedback | review load
 Fix: lint rule | CI change | test | agent instructions | PR template | docs | process
 Target: <file path in the repo, or the workflow and job>
 Comments: <every comment or review id that shows it, comma-separated, or none>

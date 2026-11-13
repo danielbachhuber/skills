@@ -61,6 +61,12 @@ class MeasureTest(unittest.TestCase):
         self.assertIn("2 PRs waiting for a first review, 1 of them all week, the oldest for 35 days across 2 PRs",
                       describe(impact, 7))
 
+    def test_review_load_is_one_persons_share_of_feedback(self):
+        impact, _ = measure(finding(signal="review load", refs={"reviewer": "ben", "prs": [1]}),
+                            self.comments, self.runs, self.prs, 7, DATA)
+        self.assertEqual((impact["reviewerItems"], impact["reviewerShare"], impact["waitingPrs"]), (1, 50, 0))
+        self.assertIn("one reviewer wrote 50% of the review feedback (1 comments and summaries)", describe(impact, 7))
+
     def test_warns_on_unknown_ids(self):
         _, warnings = measure(finding(refs={"comments": [99], "ciRuns": [5], "prs": [404]}),
                               self.comments, self.runs, self.prs)

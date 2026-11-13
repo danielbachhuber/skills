@@ -19,6 +19,22 @@ def parse_time(value):
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+def feedback_share(data, login):
+    """How much of the window's review feedback one person wrote."""
+    total = mine = 0
+    prs = set()
+    for pr in data["prs"]:
+        items = [c for c in pr["comments"] if c.get("inWindow", True) and not c["byAuthor"]]
+        items += [r for r in pr.get("reviews", []) if r.get("inWindow", True) and r.get("body")]
+        total += len(items)
+        n = sum(1 for i in items if i["author"] == login)
+        mine += n
+        if n:
+            prs.add(pr["number"])
+    return {"reviewer": login, "reviewerItems": mine, "reviewerPrs": len(prs),
+            "reviewerShare": round(100 * mine / total) if total else 0}
+
+
 def index(data):
     comments, prs = {}, {}
     for pr in data["prs"]:
@@ -33,7 +49,7 @@ def index(data):
     return comments, runs, prs
 
 
-def measure(finding, comments, runs, prs, days=7):
+def measure(finding, comments, runs, prs, days=7, data=None):
     refs = finding.get("refs") or {}
     warnings = []
     cited = []
@@ -78,6 +94,7 @@ def measure(finding, comments, runs, prs, days=7):
         # Waiting counts only for review-wait findings, where it is the cost. Waits run
         # side by side, so the measure is how many PRs waited, not the sum of hours.
         **wait_impact(named if signal == "review wait" else [], days),
+        **(feedback_share(data, refs["reviewer"]) if signal == "review load" and data and refs.get("reviewer") else {}),
         "reverts": len(refs.get("reverts") or []),
         "bugs": len(refs.get("bugs") or []),
     }, warnings
@@ -104,6 +121,9 @@ def describe(impact, days):
         reviewers = impact["reviewers"]
         parts.append(f"{impact['comments']} review comment{'s' * (impact['comments'] != 1)} "
                      f"from {reviewers} reviewer{'s' * (reviewers != 1)}")
+    if impact.get("reviewerShare"):
+        parts.append(f"one reviewer wrote {impact['reviewerShare']}% of the review feedback "
+                     f"({impact['reviewerItems']} comments and summaries)")
     if impact["ciFailures"]:
         parts.append(f"{impact['ciFailures']} failed CI run{'s' * (impact['ciFailures'] != 1)} "
                      f"({impact['ciMinutes']} min)")
@@ -138,7 +158,8 @@ def rank_key(finding):
     i = finding.get("impact") or {}
     return (2 * i.get("prs", 0) + i.get("comments", 0) + 2 * i.get("reworkPrs", 0)
             + 0.5 * i.get("ciFailures", 0) + i.get("ciMinutes", 0) / 10
-            + 2 * i.get("wholeWindow", 0) + 5 * (i.get("reverts", 0) + i.get("bugs", 0)))
+            + 2 * i.get("wholeWindow", 0) + 5 * (i.get("reverts", 0) + i.get("bugs", 0))
+            + i.get("reviewerShare", 0) / 5)
 
 
 def main(path):
@@ -148,7 +169,7 @@ def main(path):
         data = json.load(f)
     comments, runs, prs = index(data)
     for finding in findings["findings"]:
-        finding["impact"], warnings = measure(finding, comments, runs, prs, data["days"])
+        finding["impact"], warnings = measure(finding, comments, runs, prs, data["days"], data)
         finding["impactLine"] = describe(finding["impact"], data["days"])
         for w in warnings:
             print(f"warning: {finding['title']}: {w}", file=sys.stderr)
