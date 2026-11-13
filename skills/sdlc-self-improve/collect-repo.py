@@ -10,8 +10,11 @@ Writes, in the output directory (printed on the last line):
   pr-<n>.md     one digest per pull request picked for review: timings, review
                 comments with their ids, and failed CI runs
   batch-<n>.md  the pull requests in each reviewer batch
-  prompt-<n>.md, prompt-flow.md
-                each reviewer's filled-in prompt
+  reviewer-<login>.md
+                all of one person's review feedback in the window, for
+                each person who reviewed 3 or more PRs
+  prompt-<n>.md, prompt-flow.md, prompt-people.md
+                each reviewer subagent's filled-in prompt
   flow.md       repo-wide numbers: waits, CI failures by workflow, reverts, bugs
 """
 
@@ -82,7 +85,13 @@ def gh(*args, check=True):
 
 def gh_json(*args, check=True):
     out = gh(*args, check=check)
-    return json.loads(out) if out.strip() else None
+    try:
+        return json.loads(out) if out.strip() else None
+    except json.JSONDecodeError:
+        # GitHub sometimes answers with an error page; optional calls go without.
+        if check:
+            raise
+        return None
 
 
 def parse_time(value):
@@ -347,6 +356,38 @@ def days_text(h):
     return f"{h:g}h" if h < 48 else f"{h / 24:.0f} days"
 
 
+def feedback_by_person(prs):
+    """Every person's review feedback in the window: comments on others' PRs, and review summaries."""
+    people = {}
+    for pr in prs:
+        if pr["authorIsBot"]:
+            continue
+        items = [("comment", c) for c in pr["comments"] if c["inWindow"] and not c["byAuthor"]]
+        items += [("review", r) for r in pr["reviews"] if r["inWindow"] and r["body"]]
+        for kind, item in items:
+            person = people.setdefault(item["author"], {"bot": item["bot"], "prs": {}})
+            person["prs"].setdefault(pr["number"], {"pr": pr, "items": []})["items"].append((kind, item))
+    return people
+
+
+def reviewer_file(login, person):
+    count = sum(len(entry["items"]) for entry in person["prs"].values())
+    lines = [f"# {login}{' (bot)' if person['bot'] else ''}: {count} pieces of review feedback on "
+             f"{len(person['prs'])} PRs", ""]
+    for entry in sorted(person["prs"].values(), key=lambda e: e["pr"]["number"]):
+        pr = entry["pr"]
+        lines += [f"## [{pr['title']} (#{pr['number']})]({pr['url']}) by {pr['author']}", ""]
+        for kind, item in sorted(entry["items"], key=lambda ki: ki[1]["at"]):
+            if kind == "review":
+                head = f"[{item['id']}] review summary · {item['state']}"
+            else:
+                where = f" · {item['path']}:{item['line']}" if item["path"] else ""
+                head = f"[{item['id']}] {item['kind']}{where}"
+            lines.append(f"- {head}\n  > " + clip(item["body"], 800).replace("\n", "\n  > "))
+        lines.append("")
+    return "\n".join(lines)
+
+
 def median(values):
     values = [v for v in values if v is not None]
     return round(statistics.median(values), 1) if values else None
@@ -400,6 +441,16 @@ def flow_report(repo, days, prs, ci, reverts, bugs):
             lines.append(f"  - {job}: {n}" + (f"\n    > {e['sample'][job]}" if job in e["sample"] else ""))
     if not by_workflow:
         lines.append("- none" if ci["total"] else "- not checked: no GitHub Actions runs in the window")
+    people = feedback_by_person(prs)
+    total = sum(len(e["items"]) for p in people.values() for e in p["prs"].values())
+    lines += ["", "## Review feedback by person", "",
+              "Comments on others' PRs and review summaries, in the window.", ""]
+    for login, p in sorted(people.items(), key=lambda kv: -sum(len(e["items"]) for e in kv[1]["prs"].values()))[:12]:
+        n = sum(len(e["items"]) for e in p["prs"].values())
+        lines.append(f"- {login}{' (bot)' if p['bot'] else ''}: {n} on {len(p['prs'])} PRs, "
+                     f"{round(100 * n / total) if total else 0}% of all feedback")
+    if not people:
+        lines.append("- none")
     lines += ["", "## Reverts and hotfixes", ""]
     lines += [f"- {r['subject']} ({r['url']})" for r in reverts] or ["- none"]
     lines += ["", "## Bug issues opened", ""]
@@ -481,6 +532,19 @@ def main():
                          {**values, "BATCH": str(n), "PRS": fh.read(), "REPORT": os.path.join(out, f"report-{n}.md")})
     write_prompt(os.path.join(out, "prompt-flow.md"), "flow-reviewer-prompt.md",
                  {**values, "REPORT": os.path.join(out, "report-flow.md")})
+    # Each person who gave feedback on several PRs gets a file of all of it, so a
+    # concern raised once per PR across batches, or on PRs no batch read, is seen.
+    people = {login: p for login, p in feedback_by_person(prs).items() if len(p["prs"]) >= 3}
+    listing = []
+    for login, person in sorted(people.items(), key=lambda kv: -sum(len(e["items"]) for e in kv[1]["prs"].values())):
+        path = os.path.join(out, f"reviewer-{re.sub(r'[^A-Za-z0-9_.-]', '_', login)}.md")
+        with open(path, "w") as fh:
+            fh.write(reviewer_file(login, person))
+        listing.append(f"- `{path}`: {login}, {sum(len(e['items']) for e in person['prs'].values())} pieces "
+                       f"of feedback on {len(person['prs'])} PRs")
+    if listing:
+        write_prompt(os.path.join(out, "prompt-people.md"), "people-reviewer-prompt.md",
+                     {**values, "REPORT": os.path.join(out, "report-people.md"), "PEOPLE": "\n".join(listing)})
 
     comments = sum(review_comment_count(pr) for pr in picked)
     print(f"{len(prs)} pull requests, {len(picked)} with review feedback or failed CI in {len(batches)} batches, "

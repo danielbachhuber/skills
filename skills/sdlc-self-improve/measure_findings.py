@@ -25,6 +25,10 @@ def index(data):
         prs[pr["number"]] = pr
         for c in pr["comments"]:
             comments[c["id"]] = (pr, c)
+        # A review summary can be cited by its review id, like a comment.
+        for r in pr.get("reviews", []):
+            if r.get("body"):
+                comments.setdefault(r["id"], (pr, {**r, "byAuthor": False}))
     runs = {f["id"]: f for f in data["ci"]["failures"]}
     return comments, runs, prs
 

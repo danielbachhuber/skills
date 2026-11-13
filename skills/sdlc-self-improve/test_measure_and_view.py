@@ -116,5 +116,34 @@ class ViewTest(unittest.TestCase):
         self.assertNotIn("actions", item)
 
 
+class FeedbackByPersonTest(unittest.TestCase):
+    def test_groups_each_persons_feedback_in_the_window_across_prs(self):
+        import importlib.util, os
+        spec = importlib.util.spec_from_file_location(
+            "collect_repo", os.path.join(os.path.dirname(os.path.abspath(__file__)), "collect-repo.py"))
+        collect = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(collect)
+
+        def pr(number, author, comments=(), reviews=()):
+            return {"number": number, "title": f"PR {number}", "url": f"https://x/{number}", "author": author,
+                    "authorIsBot": False, "comments": list(comments), "reviews": list(reviews)}
+
+        def comment(cid, who, in_window=True, by_author=False):
+            return {"id": cid, "author": who, "bot": False, "inWindow": in_window, "byAuthor": by_author,
+                    "kind": "review", "path": "a.ts", "line": 3, "at": f"2026-11-0{cid % 9 + 1}", "body": "Use a guard"}
+
+        people = collect.feedback_by_person([
+            pr(1, "ana", [comment(1, "rob"), comment(2, "ana", by_author=True), comment(3, "rob", in_window=False)]),
+            pr(2, "cy", [comment(4, "rob")], [{"id": 50, "author": "rob", "bot": False, "inWindow": True,
+                                                "state": "APPROVED", "at": "2026-11-09", "body": "Looks good"}]),
+        ])
+        self.assertEqual(set(people), {"rob"})
+        self.assertEqual({n: len(e["items"]) for n, e in people["rob"]["prs"].items()}, {1: 1, 2: 2})
+        text = collect.reviewer_file("rob", people["rob"])
+        self.assertIn("# rob: 3 pieces of review feedback on 2 PRs", text)
+        self.assertIn("[50] review summary · APPROVED", text)
+        self.assertIn("## [PR 1 (#1)](https://x/1) by ana", text)
+
+
 if __name__ == "__main__":
     unittest.main()
