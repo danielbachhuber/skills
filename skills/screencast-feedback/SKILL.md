@@ -144,6 +144,17 @@ skill. Its buttons are:
   code, on its default branch. Its prompt names the change, quotes the person, and
   gives the screenshot paths. When you can't tell which project that is, leave the
   button off and say so in chat.
+- **Revise**: on every card, a `note` field labeled "Revise" (placeholder: "What to
+  change: the item, the quote, the screenshots, or why it's wrong") and a `message`
+  action labeled "Revise" with `repeat: true`. Its text names the item and carries
+  `{note}` and the issue body as the user left it (`{draft}`).
+
+When the user presses **Revise**, change the item in `feedback.json` to match the
+note, going back to the timeline and screenshots when the note questions what was
+said or shown. Keep the user's edits to the issue body unless the note asks otherwise.
+If the note shows the item is wrong, move it to **Unclear** with the reason. Run
+`report.py` again so `feedback.md` and the report match, republish the cards under the
+same key, and reply in one line saying what changed.
 
 In chat, say how many items there are and where `feedback.md` and `report.html` are.
 
