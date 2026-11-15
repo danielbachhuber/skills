@@ -72,12 +72,12 @@ Write the items to `feedback.json` in the output directory, in the shape the
 docstring at the top of `report.py` gives, then render it:
 
 ```bash
-python3 ~/.claude/skills/screencast-feedback/report.py <out>/feedback.json \
-  --html-dir "${BB_THREAD_STORAGE:-<out>}/screencast-feedback"
+python3 ~/.claude/skills/screencast-feedback/report.py <out>/feedback.json
 ```
 
 It writes `feedback.md` beside the JSON, and `report.html` with a `report-media/`
-folder of the screenshots it shows to the `--html-dir`. The report documents every
+folder of the screenshots it shows to `~/projects/drafts/screencast-feedback-<video
+name>/`. When the user names another place for the report, pass it as `--html-dir`. The report documents every
 item with its screenshots, and the Keep, Unclear, and Also on screen lists. Make it
 every time, whatever else the user asked for: issues, a to-do list, or a fix. Edit
 `feedback.json` and run the script again rather than editing either output by hand.
@@ -125,14 +125,8 @@ observations into items.
 
 ## 4. Present
 
-Show the HTML report first. In bb, put this directive on its own line in your reply,
-which renders the report inline:
-
-```text
-::inline-vis{source="thread-storage" file="screencast-feedback/report.html"}
-```
-
-Outside bb, link `report.html` by its absolute path.
+Link `report.html` first, as a Markdown link whose target is its absolute path, such
+as `[report.html](/Users/<you>/projects/drafts/screencast-feedback-<video name>/report.html)`.
 
 When `bb impromptu-ui help` succeeds, load the `impromptu-ui` skill and publish one
 card per item under the key `screencast-feedback`. Use ordinary cards, not visual
@@ -156,8 +150,8 @@ In chat, say how many items there are and where `feedback.md` and `report.html` 
 Without Impromptu UI, print the items in chat with their screenshot links.
 
 The recording and the extracted screenshots can show private data such as bookmarks,
-other tabs, and notifications. Keep them in `/tmp` or the thread's storage, and do
-not commit or attach them
+other tabs, and notifications. Keep them in `/tmp` and the report's folder in
+`~/projects/drafts/`, and do not commit or attach them
 anywhere unless the user asks.
 
 ## Crop screenshots before they go into an issue

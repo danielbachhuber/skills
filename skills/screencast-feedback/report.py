@@ -4,7 +4,9 @@
     python3 report.py <feedback.json> [--html-dir DIR]
 
 Writes feedback.md beside feedback.json, and report.html plus report-media/ (copies of
-every screenshot the report shows) to DIR, which defaults to the same directory. The
+every screenshot the report shows) to DIR, which defaults to
+~/projects/drafts/screencast-feedback-<video name>/. The video name comes from "video"
+in the JSON, or the name of the directory feedback.json is in. The
 HTML refers to its screenshots by relative path, so report.html and report-media/
 move together.
 
@@ -218,7 +220,9 @@ def main():
     ap.add_argument("--html-dir", type=Path)
     args = ap.parse_args()
     data = json.loads(args.feedback.read_text())
-    html_dir = (args.html_dir or args.feedback.parent).expanduser()
+    stem = Path(data["video"]).stem if data.get("video") else args.feedback.resolve().parent.name
+    default = Path.home() / "projects" / "drafts" / f"screencast-feedback-{stem}"
+    html_dir = (args.html_dir or default).expanduser()
     html_dir.mkdir(parents=True, exist_ok=True)
     media_dir = html_dir / "report-media"
     if media_dir.exists():
