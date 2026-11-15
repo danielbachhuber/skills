@@ -68,7 +68,21 @@ While reading, keep in mind:
 
 ## 3. Write the feedback
 
-Write `feedback.md` in the output directory. One item is one change. Merge remarks
+Write the items to `feedback.json` in the output directory, in the shape the
+docstring at the top of `report.py` gives, then render it:
+
+```bash
+python3 ~/.claude/skills/screencast-feedback/report.py <out>/feedback.json \
+  --html-dir "${BB_THREAD_STORAGE:-<out>}/screencast-feedback"
+```
+
+It writes `feedback.md` beside the JSON, and `report.html` with a `report-media/`
+folder of the screenshots it shows to the `--html-dir`. The report documents every
+item with its screenshots, and the Keep, Unclear, and Also on screen lists. Make it
+every time, whatever else the user asked for: issues, a to-do list, or a fix. Edit
+`feedback.json` and run the script again rather than editing either output by hand.
+
+One item is one change. Merge remarks
 that ask for the same change, even when they are minutes apart, and split a remark
 that asks for two ("this should be a back button, and the map is zoomed wrong"). Two
 remarks on a similar topic about different screens, such as the loading state of the
@@ -111,6 +125,15 @@ observations into items.
 
 ## 4. Present
 
+Show the HTML report first. In bb, put this directive on its own line in your reply,
+which renders the report inline:
+
+```text
+::inline-vis{source="thread-storage" file="screencast-feedback/report.html"}
+```
+
+Outside bb, link `report.html` by its absolute path.
+
 When `bb impromptu-ui help` succeeds, load the `impromptu-ui` skill and publish one
 card per item under the key `screencast-feedback`. Use ordinary cards, not visual
 review cards: a visual review shows images but replaces the buttons. Each card's
@@ -128,12 +151,13 @@ skill. Its buttons are:
   gives the screenshot paths. When you can't tell which project that is, leave the
   button off and say so in chat.
 
-In chat, say how many items there are and where `feedback.md` is.
+In chat, say how many items there are and where `feedback.md` and `report.html` are.
 
 Without Impromptu UI, print the items in chat with their screenshot links.
 
 The recording and the extracted screenshots can show private data such as bookmarks,
-other tabs, and notifications. Keep them in `/tmp` and do not commit or attach them
+other tabs, and notifications. Keep them in `/tmp` or the thread's storage, and do
+not commit or attach them
 anywhere unless the user asks.
 
 ## Crop screenshots before they go into an issue
