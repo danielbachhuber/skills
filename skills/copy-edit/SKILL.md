@@ -16,8 +16,8 @@ their time, and a flow read buried under forty typo cards gets skipped.
 
 | Scope | What it answers | Steps |
 |---|---|---|
-| **Whole piece** | Does it hold together? Does each part lead to the next? Is the argument clear and believable? | 1, 2, 3, 6 |
-| **One section** | The same questions for one section, and how it connects to the sections around it, then a line edit of it | 1, 2, 3, 4, 6 |
+| **Whole piece** | What is the piece trying to be, and does it get there? Is the thesis clear, the strongest material up front, and each section earning its place? What shapes could it take? | 1, 2, 3, 6 |
+| **One section** | The same questions for one section, judged against the piece's thesis, then a line edit of it | 1, 2, 3, 4, 6 |
 | **Line edit** | Typos, grammar, passive voice, consistency, unclear references, the author's writing rules | 1, 4, 6 |
 | **Fact check** | Are the names, numbers, quotes, links, and images right? | 1, 5, 6 |
 
@@ -61,53 +61,59 @@ disagree.
   general style advice.
 - Never edit the file before the user presses Apply on a card.
 
-## 2. Reverse outline
+## 2. Judge the piece as a whole
 
-Flow problems are invisible sentence by sentence. They show up when you see the whole piece
-as a list. Build that list before judging anything.
+A whole-piece read is an editor's judgment of what the piece is and whether it works, not a
+list of local fixes. Work from the top down. Don't start with paragraph links: a piece whose
+links all hold can still be about the wrong thing.
 
-1. **The point.** Write the piece's main point in one sentence, in your words. If you can't,
-   that is the first finding: the piece doesn't yet know what it's arguing.
-2. **One line per paragraph.** Number every prose paragraph, including headings as
-   dividers. For each, write what it says in under 15 words and the job it does: claim,
-   evidence, example, setup, definition, transition, aside, or payoff. A paragraph that says
-   two things gets both, and a mark that it should split. A paragraph whose job you can't
-   name is a candidate to cut.
-3. **The joints.** For each pair of neighboring paragraphs, name how the second follows from
-   the first: because, so, but, for example, which means, in contrast. Where the only
-   honest word is "and also" or "separately," the reader loses the thread there. Mark it.
-4. **The section test.** For each section, does its heading match what its paragraphs do?
-   Does the section move the main point forward, and could the reader say why it comes
-   where it does?
+1. **What is it trying to be?** An argument, a report, a how-to, a story. Does the body
+   deliver what the title and opening promise? A post titled as an essay that reads as a
+   project status report has a problem no transition can fix.
+2. **The thesis.** Look for it anywhere: the title, the opening, a line in the middle, the
+   ending, the notes. Quote it in the author's words. If you find two that disagree, the
+   piece may be two pieces; say so. If you find none, say so, and propose one built from
+   the author's own sentences. Two that differ but fit together, such as a definition early
+   and a fuller one at the end, are a finding too: the piece should connect them.
+3. **Test everything against the thesis.** Does the title promise it? Does the opening
+   promise it before the reader's attention runs out? Does each section serve a part of it?
+   Name the sections that serve none (detours) and the parts of the thesis that no section
+   serves (gaps). Does the ending deliver it?
+4. **The strongest material.** Rank the examples, stories, and evidence by how well each
+   proves the thesis to this reader. Is the strongest one where the reader will meet it
+   early and remember it, or is it buried in a subsection while a weaker one makes the
+   case?
+5. **The reader's experience.** Read as the reader from step 1. Where do they first stop
+   knowing why they should keep reading? Where does insider context (names, tools, project
+   history) arrive before they care about it? Where does density (a run of charts, a wall
+   of numbers) bury the argument?
+6. **Pushback.** Where would a doubtful reader in that audience stop agreeing?
 
-For One section, outline that section and the last paragraph before it and the first after
-it, so you can judge its entrance and exit.
+Then write **three to five findings**, most important first. Each is a claim about the
+piece, with quoted evidence and why it matters to the reader. The first is the one to fix
+if the author fixes only one. Don't call the structure sound unless the title, opening,
+sections, and ending all serve one thesis; "the bones are sound, the problems are at the
+edges" is almost always a sign you read paragraph by paragraph.
 
-## 3. Diagnose structure and flow
+Also name what's working, with a quote, so the author protects it while revising.
 
-Read the outline, not the prose, and find the two to four **root problems**. A root problem
-explains several symptoms: three broken joints in a row often mean one paragraph is in the
-wrong place, and a section that repeats an earlier one often means the piece is making the
-same point twice because it hasn't decided which section owns it. Look for:
+**Then propose shapes.** Unless the current structure already serves the thesis, propose two
+or three shapes the piece could take, built from material it already has. A shape is a
+pitch in one sentence ("Lead with the rest-of-us problem, and use the Postgres port as the
+case study"), a section-by-section outline of what goes where, and what it costs: what gets
+cut, moved, or written new. Recommend one and say why. When a shape needs only a few moves,
+offering "Keep this shape, fix the links" as one of the options is fine.
 
-| Problem | How it shows in the outline |
-|---|---|
-| No single point | You couldn't write step 2.1, or the opening promises a different point than the ending delivers |
-| Setup after use | A term, name, or idea is used in paragraph 4 and explained in paragraph 9 |
-| Wrong order | The joints read better if two paragraphs or sections swap |
-| Repeats | Two paragraphs with the same line in the outline |
-| Detour | A paragraph whose job doesn't serve the point, or an aside long enough to lose the reader |
-| Claim without evidence | A claim paragraph with no evidence or example paragraph after it, or a placeholder where the evidence should be |
-| Weak entrance | The opening doesn't tell the reader what the piece is about or why they should care, before the second paragraph |
-| Weak exit | The ending stops instead of landing on the point, or introduces something new |
-| Pushback | Where a doubtful reader in the audience from step 1 would stop agreeing |
+## 3. Reverse outline
 
-Rank the root problems by how much fixing each would improve the piece. For a rough draft,
-measure against the author's notes: what the piece is trying to become, not only what's
-there.
+Use a reverse outline to locate the findings in the text and to show the shapes. Number
+every prose paragraph, with headings as dividers. For each, write what it says in under 15
+words and the job it does: claim, evidence, example, setup, definition, transition, aside,
+or payoff. Between neighbors, name how the second follows from the first: because, so, but,
+for example. Where the only honest word is "and also," mark the break "↯".
 
-Also name what's working, with a quote: the passage, joint, or example the author should
-protect while revising.
+For One section, outline that section plus the paragraph before it and the one after it,
+and judge the section against the piece's thesis, not only on its own.
 
 ## 4. Line edit
 
@@ -160,31 +166,44 @@ pattern and check `bb impromptu-ui schema` for fields. Write the JSON under
 
 ### Whole piece and One section
 
+This takes two rounds, because the cards depend on which shape the author picks.
+
+**Round 1: the read and the shapes.**
+
 - `summary`: a link to the file, then, in short paragraphs:
-  1. The main point, in one sentence, and the reader you assumed, so the author can correct
-     either.
+  1. The thesis, quoted, and the reader you assumed, so the author can correct either.
   2. The answer to what the author said they suspected.
-  3. The root problems, most important first, each in two or three sentences that point at
-     paragraphs by quoting their first few words.
+  3. The findings from step 2, most important first, each in two to four sentences that
+     point at passages by quoting their first few words.
   4. What's working, quoted.
-- **Outline** section, first: one item titled "Outline: now and proposed". Its `changes`
-  entry has the label "Outline", `before` as the reverse outline from step 2 (one numbered
-  line per paragraph, its job in brackets, broken joints marked "↯ no link to the
-  previous"), and `after` as the outline with the proposed moves, cuts, and additions made,
-  new paragraphs marked "[new]". The diff shows the author the shape of the change at a
-  glance. Buttons: Looks right (`primary`), Revise (`"repeat": true`, `{note}`) for "you
-  misread what this paragraph is for." This item is a plan, not an edit: never apply it to
-  the file.
-- **Structure** section: a card for each change that carries out the proposed outline, in
-  the order the author should make them. Each card says which root problem it fixes.
+  5. One closing paragraph: unused images that fit, and placeholders still to fill.
+
+  Keep each finding to what the author needs to act on it; the summary should read in two
+  minutes. Tell the author they can correct the thesis or reader by replying in chat.
+- A **Shapes** section with one item per shape, recommended first. Its `title` is the pitch.
+  Its `summary` says what it costs and, for the recommended one, why. Its `changes` entry
+  has the label "Outline", `"format": "code"` so each outline line diffs on its own, `before` as the current reverse outline from step 3 (the same on
+  every shape), and `after` as the outline in this shape, with moved paragraphs marked
+  "(moved from 5)", split ones "(part of 7)", and new ones "[new]". List cut paragraphs at
+  the end as "Cut: 12". Buttons: Use this shape (`primary` on the
+  recommended one), and Revise (`"repeat": true`, `{note}`). These items are plans, never
+  applied to the file.
+
+Say in chat that the read and the shapes are above the composer, and end the turn.
+
+**Round 2: the cards for the chosen shape.** When the author picks one, mark it `{ "label":
+"Chosen", "tone": "success", "complete": true }` and the others `{ "label": "Not chosen",
+"complete": true }`, and add a **Structure** section to the same view: a card for each
+change that carries out that shape, in the order the author should make them.
+
   - A move: one change removing the passage, one inserting it where it goes, the author's
     words unchanged.
   - A cut: the passage, with `after` of `""`.
   - A repeat: keep the version that says more and delete the other. If the deleted one has a
     sentence the kept one lacks, move that sentence over as a second change.
-  - A missing joint, entrance, exit, or example: a `draft` card (below) with a one- or
-    two-sentence bridge built from the author's words and notes, with a bracketed blank,
-    such as "[number] procedures", for facts only the author knows.
+  - A missing thesis statement, link, entrance, exit, or example: a `draft` card (below)
+    with one or two sentences built from the author's words and notes, with a bracketed
+    blank, such as "[number] procedures", for facts only the author knows.
   - A paragraph that does two jobs: a split, by inserting a paragraph break.
   - A sentence that should be reworded, such as a transition whose "this" points at nothing:
     a `draft` card whose `before` is that sentence and whose `draft` is the reworded one.
@@ -194,7 +213,12 @@ pattern and check `bb impromptu-ui schema` for fields. Write the JSON under
   - New prose where no prose sentence comes before it, such as a closing after the notes:
     anchor on the heading it goes under, or on the first line of the notes and put the new
     prose before them.
-- For One section, add **Fixes** and **Suggestions** sections for that section's line edit.
+
+A new section the shape needs that only the author can write gets a card with no change: a
+heading, what it should argue, and which of their notes and material belong in it.
+
+- For One section, add **Fixes** and **Suggestions** sections for that section's line edit
+  in round 2.
 - No line edits outside the section, and none at all for Whole piece. Keep any you notice in
   your notes, and say in chat that a line edit can follow once the structure settles.
 
@@ -243,10 +267,11 @@ composer. Don't repeat the summary or the cards in chat.
   with `after`, or with the `{draft}` text the button sent, and nothing else, matching on
   text, not line numbers. If `before` is gone, tell the user and mark the card `{ "label":
   "Text changed", "tone": "warning" }` rather than guessing.
-- **Skip**, **Noted**, **Checked, it's right**, **Looks right**: change nothing.
+- **Use this shape**: round 2 of step 6.
+- **Skip**, **Noted**, **Checked, it's right**: change nothing.
 - **Revise**: publish the item again under the same `id` with the new suggestion. A Revise
-  on the outline can change the diagnosis: redo step 3 and republish the Structure cards
-  that depend on it.
+  on a shape that corrects your thesis or reader changes the read: redo step 2 and
+  republish the summary and the shapes.
 
 After each one, publish the view again under the same key with that item's `status` set to
 `{ "label": "Applied", "tone": "success", "complete": true }`, `{ "label": "Skipped",
@@ -262,8 +287,11 @@ cards and cards whose text is gone, and give new cards ids no earlier round used
 | Mistake | Instead |
 |---|---|
 | Starting with typos when the author asked whether the piece flows | Ask the scope first; a whole-piece read has no line cards |
-| Structure feedback as a list of general questions ("Is the opening strong?") | Build the reverse outline and point at the paragraphs where the thread breaks |
-| A card per symptom of one problem | Find the root problem: one misplaced paragraph explains three broken joints |
+| A whole-piece read made of paragraph moves and transition fixes | Start from what the piece is trying to be, its thesis, and its strongest material; the links come last |
+| "The bones are sound" when the title promises one thing and the body delivers another | Say the piece hasn't decided what it's about, and propose shapes that decide |
+| Assuming the thesis is in the opening, or at the end | Look everywhere, including the notes; quote it |
+| Cards before the author has picked a shape | Round 1 is the read and the shapes; cards come in round 2 |
+| A card per symptom of one problem | Find the root problem: one misplaced paragraph explains three broken links |
 | Ignoring what the author said they suspected | Answer it by name in the summary, even to disagree |
 | "Suggested:" followed by a rewritten paragraph | Moves and cuts of the author's words, plus short bridge sentences as editable drafts |
 | Changing a phrase because you'd say it differently | Leave it unless it breaks a rule, is unclear, or is passive with a known actor |
