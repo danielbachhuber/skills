@@ -1,228 +1,272 @@
 ---
 name: copy-edit
-description: Use when the user asks to copy edit, edit, proofread, fact-check, critique, or give a read to a piece of their own writing, such as a blog post draft, essay, newsletter, or doc, at any stage from rough draft to final, and wants feedback on structure and arc as well as typos, grammar, passive voice, consistency, duplicated passages, unclear references, wrong facts, misdescribed links or images, or breaks of their writing rules.
+description: Use when the user asks to copy edit, edit, proofread, fact-check, critique, or give a read to a piece of their own writing, such as a blog post draft, essay, newsletter, or doc, at any stage from rough draft to final, whether they want feedback on the whole piece's structure, flow, and argument, on one section, or a line edit for typos, grammar, passive voice, consistency, unclear references, and breaks of their writing rules, or a check of facts, links, and images.
 ---
 
 # Copy edit
 
-The author writes. The editor suggests. A copy edit reads the piece the way a reader will,
-says what works and what doesn't, checks that it is correct, and proposes the smallest
-change that fixes each problem, one per card, so the author can take or leave each one.
+The author writes. The editor reads the piece the way a reader will, says what works and
+what doesn't, and proposes changes the author can take or leave one at a time. The editor
+moves, cuts, and fixes the author's own words. Where something is missing, the editor
+proposes a short sentence as an editable diff, never a rewritten paragraph in its own voice.
 
-It never rewrites sentences into the editor's voice. The editor moves, cuts, and fixes the
-author's own words. Where something is missing, such as a transition or an example, the
-editor proposes the shortest sentence that fills the gap, built from the author's own words
-and notes where possible, as an editable diff the author can rewrite before applying.
+There are four kinds of edit, and they need different reading. Ask which one the author
+wants before reading closely, because a line edit of a piece whose order is wrong wastes
+their time, and a flow read buried under forty typo cards gets skipped.
+
+| Scope | What it answers | Steps |
+|---|---|---|
+| **Whole piece** | Does it hold together? Does each part lead to the next? Is the argument clear and believable? | 1, 2, 3, 6 |
+| **One section** | The same questions for one section, and how it connects to the sections around it, then a line edit of it | 1, 2, 3, 4, 6 |
+| **Line edit** | Typos, grammar, passive voice, consistency, unclear references, the author's writing rules | 1, 4, 6 |
+| **Fact check** | Are the names, numbers, quotes, links, and images right? | 1, 5, 6 |
 
 This is not `unslop` or `humanizer` (cut AI tells) or `claude-for-nonprofits:content-review`
 (risk). Run those separately if the user wants them.
 
-Work in this order: read, structure, facts, lines. Structure comes first because polishing a
-paragraph the author then cuts wastes their time.
+## 1. Ask, then read
 
-## 1. Read the piece
+**Ask the scope.** Skim the file first, so the question can name its sections. Then publish
+an inline Impromptu UI question (see the `bb-global-skills:impromptu-ui` skill, "Ask a
+question inline") under the key `copy-edit-<slug>-scope`, with two questions:
 
-- Read the whole file, and every image in it (for a Hugo page bundle, the image files in the
-  post's folder). Open images with the Read tool so you see them.
+1. "What kind of edit do you want on <title>?" Buttons: Whole piece (`primary` for a draft
+   with an outline or notes still in it), One section, Line edit (`primary` for a draft that
+   reads as finished), Fact check.
+2. "What do you already suspect isn't working?" Buttons: The flow, The argument, The opening
+   or ending, Nothing in particular. The author can type their own answer in the
+   "Something else…" field.
+
+Skip the question when the request already says, such as "proofread this" (line edit) or
+"does this flow?" (whole piece). For One section, ask which section next, with up to four
+headings as buttons; the author can type any other. End the turn after publishing.
+
+Whatever the author says they suspect, the read answers it directly, by name, even when you
+disagree.
+
+**Then read the piece:**
+
+- Read the whole file and every image it shows. Open images with the Read tool so you see
+  them. For a Hugo page bundle, also look at the images in the post's folder that the post
+  doesn't use yet: an unused chart is often the evidence a placeholder is waiting for. Name
+  any that fit in the summary.
 - Sort the file into **prose meant for readers** and **notes to self**: an outline,
   "Potentially incorporate:", bullet scraps, TODOs, placeholders like "N tables" or
-  "(chart)". Notes to self are the author's statement of intent. Read them to understand
-  where the piece is going. Never make line-level cards for them.
-- Judge how finished the draft is. A rough draft gets structural feedback on the arc and
-  what's missing, measured against the author's notes. A near-final draft gets full weight
-  on both structure and lines.
-- Work out who the reader is from the piece and where it will be published, in one sentence,
-  such as "engineering leaders outside big tech who have heard 'AI-native' but haven't seen
-  it in practice". Judge "no assumed context" and "why should I care" against that reader.
+  "(chart)". Notes are the author's statement of where the piece is going. Read them for
+  intent and never make line cards for them.
+- Work out who the reader is, in one sentence, such as "engineering leaders outside big tech
+  who have heard 'AI-native' but haven't seen it in practice."
 - Read the author's writing rules: the Writing section of `~/.claude/CLAUDE.md`, and any
   style guide, voice guide, or AGENTS.md in the repo the piece lives in. Their rules beat
-  general style advice. For this user they include no em dashes, plain approachable English,
-  no mannered prose, and no assumed context.
+  general style advice.
 - Never edit the file before the user presses Apply on a card.
 
-## 2. Structural read
+## 2. Reverse outline
 
-Read the prose for:
+Flow problems are invisible sentence by sentence. They show up when you see the whole piece
+as a list. Build that list before judging anything.
 
-| Question | What to look for |
+1. **The point.** Write the piece's main point in one sentence, in your words. If you can't,
+   that is the first finding: the piece doesn't yet know what it's arguing.
+2. **One line per paragraph.** Number every prose paragraph, including headings as
+   dividers. For each, write what it says in under 15 words and the job it does: claim,
+   evidence, example, setup, definition, transition, aside, or payoff. A paragraph that says
+   two things gets both, and a mark that it should split. A paragraph whose job you can't
+   name is a candidate to cut.
+3. **The joints.** For each pair of neighboring paragraphs, name how the second follows from
+   the first: because, so, but, for example, which means, in contrast. Where the only
+   honest word is "and also" or "separately," the reader loses the thread there. Mark it.
+4. **The section test.** For each section, does its heading match what its paragraphs do?
+   Does the section move the main point forward, and could the reader say why it comes
+   where it does?
+
+For One section, outline that section and the last paragraph before it and the first after
+it, so you can judge its entrance and exit.
+
+## 3. Diagnose structure and flow
+
+Read the outline, not the prose, and find the two to four **root problems**. A root problem
+explains several symptoms: three broken joints in a row often mean one paragraph is in the
+wrong place, and a section that repeats an earlier one often means the piece is making the
+same point twice because it hasn't decided which section owns it. Look for:
+
+| Problem | How it shows in the outline |
 |---|---|
-| Opening | Does the first paragraph make the reader want the second? Does it tell them what the piece is about? |
-| Throughline | Can you say the piece's point in one sentence? Does each section move it forward, or wander? |
-| Ending | Does it land on the point, or stop? (On a rough draft: does the outline lead to an ending?) |
-| Skeptic | Where would a doubtful reader push back? Which claims hand-wave past something? |
-| Where to expand | Where does the author move past something interesting too quickly? |
-| Examples | Which claims need a concrete example to be believed, such as a number, a specific PR, or a before and after? |
-| Why care | Which statements don't say why the reader should care? |
-| Order | Would a passage work better elsewhere, such as a definition before the first use of the term? Are two passages saying the same thing? |
+| No single point | You couldn't write step 2.1, or the opening promises a different point than the ending delivers |
+| Setup after use | A term, name, or idea is used in paragraph 4 and explained in paragraph 9 |
+| Wrong order | The joints read better if two paragraphs or sections swap |
+| Repeats | Two paragraphs with the same line in the outline |
+| Detour | A paragraph whose job doesn't serve the point, or an aside long enough to lose the reader |
+| Claim without evidence | A claim paragraph with no evidence or example paragraph after it, or a placeholder where the evidence should be |
+| Weak entrance | The opening doesn't tell the reader what the piece is about or why they should care, before the second paragraph |
+| Weak exit | The ending stops instead of landing on the point, or introduces something new |
+| Pushback | Where a doubtful reader in the audience from step 1 would stop agreeing |
 
-Write the results two ways:
+Rank the root problems by how much fixing each would improve the piece. For a rough draft,
+measure against the author's notes: what the piece is trying to become, not only what's
+there.
 
-- **The read**, a few short paragraphs for the view's summary, ranked by importance:
-  1. Who you assumed the reader is, so the author can correct it.
-  2. The one thing to fix first, if they fix only one.
-  3. What's working and should be protected while they revise. Quote it.
-  4. The rest, most important first, each in a sentence or two.
-- **A card for each concrete action**: a move, a cut, a duplicate to remove, a gap to fill,
-  a claim that needs an example. A point with no single action stays in the read only.
+Also name what's working, with a quote: the passage, joint, or example the author should
+protect while revising.
 
-## 3. Fact check
-
-Check every factual claim in the prose against its source and quote the source on the card.
-
-- **Linked sources**: read the page before saying anything about how the link describes it.
-  If you can't read it, say so rather than guess.
-- **Names, dates, numbers, quotes, titles**: check spelling, attribution, and the figure
-  itself. Words in quotation marks that point at a source, such as a definition credited to
-  a linked doc, must match it word for word. A number that is off gets a card unless the
-  text marks it as rounded ("about 60").
-- **Dates against each other**: "today" in a chart, "last week" in the text. In a draft,
-  the frontmatter date is often the day the author started, not the publish date, so a
-  mismatch with it is not a factual error. Suggest the publish date as a Suggestion card
-  instead.
-- **The author's own claims about their work**: check them against what you can reach, such
-  as a design doc in the repo or a dashboard the post cites.
-- **Images and charts**: check that the numbers and labels in the image match what the text
-  says about them, that axes and legends are labeled, and that alt text and captions describe
-  what the image shows.
-
-A wrong fact gets a card with the correction. A claim you couldn't verify gets a card that
-says what you tried, with no suggested change. List what you checked and found correct in
-one paragraph of the read, so the author knows what was covered.
-
-## 4. Line-level read
+## 4. Line edit
 
 Read every sentence of prose for:
 
 | Kind | Examples |
 |---|---|
 | Mechanical | Typos, doubled spaces, doubled words, punctuation, subject-verb agreement, dangling modifiers, mixed comparisons ("equally valuable as"), "-ly" adverb hyphens |
-| Consistency | Spelling of names and products, capitalization, italics for book and film titles, one term used two ways |
+| Consistency | Spelling of names and products, capitalization, italics for titles, one term used two ways |
 | Passive voice | "Every pull request is reviewed by a human" where the actor is known. Suggest the active form, naming the actor and keeping the author's other words. Leave passive where the actor is unknown or beside the point |
-| Unclear references | A name, acronym, or "we" / "our" the reader hasn't been told about yet, a "this" with no clear antecedent |
+| Unclear references | A name, acronym, or "we" the reader hasn't been told about yet, a "this" with no clear antecedent |
 | Author's rules | Em dashes, mannered phrasing, jargon, assumed context |
-
-Skip any paragraph a structural card proposes cutting.
 
 Do not make a card for:
 
 - A sentence that is correct and clear but could be phrased differently. That is a rewrite.
-- A joke, an aside, or a figure of speech whose meaning is plain, such as "Postgres will free
-  us from those sins." Mannered prose is a metaphor standing in for a statement the reader
-  then has to decode. A joke the reader gets is the author's voice.
-- Whitespace readers never see: trailing spaces, extra blank lines between paragraphs.
-- Placeholders. List the ones still to fill in, once, at the end of the read. The exception
-  is a placeholder that stands in for evidence, such as "For example, (examples)" or
-  "(chart or something to back up the claims)": that gets a missing-example card instead of
-  a line in the list.
-- Frontmatter, unless readers will see the mistake, such as a misspelled title.
+- A joke, aside, or figure of speech whose meaning is plain. Mannered prose is a metaphor
+  standing in for a statement the reader then has to decode. A joke the reader gets is the
+  author's voice.
+- Whitespace readers never see, and frontmatter unless readers will see the mistake.
+- Placeholders. List the ones still to fill in, once, in the summary.
 
-## 5. Write each card as the smallest change
+## 5. Fact check
 
-- `before` is the shortest exact span that contains the problem plus enough words to find it
-  uniquely in the file: usually a phrase or one sentence, never a whole paragraph for a
-  one-word fix. Copy it character for character, including doubled spaces.
-- `after` is `before` with only the fix applied. Every other word stays the author's.
-- One problem per card. A paragraph with a typo and an unclear name gets two cards.
-- No two cards' `before` spans overlap, so any card can be applied or skipped without
-  breaking another. If two problems sit in the same words, shorten the spans or make them
-  one card.
-- **Duplicates**: keep the version that says more, as written, and delete the other. If the
-  deleted one has a sentence the kept one lacks, move that sentence over unchanged as a
-  second change on the same card. If the two word an idea differently, say which wording the
-  card keeps. Don't write a merged paragraph.
-- **Moves**: one change removing the passage, one inserting it where it goes.
-- To delete a whole paragraph, include its trailing blank line in `before`.
-- List a card's changes in the order they apply: deletions first, then insertions.
-- **Gaps and missing examples** get a diff too. The summary says what the gap needs to do,
-  such as "Nothing connects 'decisions are the bottleneck' to the 'AI-native' heading. A
-  sentence here should say why that bottleneck is what AI-native means here." The change
-  anchors on the sentence the new one follows: `before` is that sentence, and the item's
-  `draft` is that sentence plus the proposed addition, with no `after`. Impromptu UI then
-  shows the insertion as a diff with an Edit tab, so the author can rewrite the new sentence
-  in place before applying it. Keep the addition to one or two plain sentences, from the
-  author's own words and notes where possible. For a missing example, quote the claim, say
-  what kind of example would back it, and build the proposed sentence from a candidate in
-  the author's notes; when there is none, propose the sentence with a bracketed blank for
-  the fact only the author knows, such as "[number] procedures".
+Check every factual claim in the prose against its source and quote the source on the card.
 
-## 6. Show the cards
+- **Linked sources**: read the page before saying anything about how the link describes it.
+  If you can't read it, say so rather than guess.
+- **Names, dates, numbers, quotes, titles**: words in quotation marks credited to a source
+  must match it word for word. A number that is off gets a card unless the text marks it as
+  rounded ("about 60").
+- **Claims with no source**: search the web for general claims; check the author's claims
+  about their own work against what you can reach, such as a design doc in the repo.
+- **Dates against each other**. A draft's frontmatter date is often the day the author
+  started, so a mismatch with it is a suggestion to set the publish date, not an error.
+- **Images and charts**: the numbers and labels match what the text says about them, axes
+  and legends are labeled, and alt text and captions describe what the image shows.
 
-Publish one Impromptu UI view, following the `bb-global-skills:impromptu-ui` skill's
-"Propose corrections to a document" pattern. Check `bb impromptu-ui schema` for fields.
+A wrong fact gets a card with the correction. A claim you couldn't verify gets a card that
+says what you tried, with no change. List what you checked and found correct in one
+paragraph of the summary.
 
-- Key: `copy-edit-<slug>`, where the slug is the file name, or the folder name for an
-  `index.md` (a Hugo page bundle). Write the JSON under `/tmp/copy-edit/<slug>/`.
-- `summary`: a link to the file, then the read from step 2.
-- Sections, in this order, leaving out empty ones:
-  1. **Structure**: moves, cuts, duplicates, gaps, missing examples.
-  2. **Facts**: wrong or unverifiable claims, links, and images.
-  3. **Fixes**: mechanical and consistency errors. Clear right and wrong.
-  4. **Suggestions**: line-level calls the author may disagree with: passive voice, unclear
-     references, rule breaks that need rewording.
-- Each item:
-  - `title`: where it is and what's wrong, such as "Postgres intro: doubled space".
-  - `summary`: one line on why. For a fact, quote the source.
-  - `changes`: `{ "label": "<file> › <heading>", "before": ..., "after": ... }` entries.
-    Use "Opening" for text before the first heading and "Frontmatter" for the front matter.
-    An `after` of `""` deletes the text.
-  - `note` with a placeholder, and buttons. Each button's `text` names the card id and what
-    it does, because the user may press them in any order. Quote short spans in full; for a
-    long passage, quote its first and last few words.
-    - A card with `changes`: Apply (`primary`), Skip, Revise (`"repeat": true`, `{note}`).
-    - A gap, a missing example, or an unclear reference that needs new words (a `draft`
-      card): Apply (`primary`, with `{draft}` in its text so the author's edits come
-      through), Skip, and Revise (`"repeat": true`, `{note}`).
-    - A claim you couldn't verify: Checked, it's right (`primary`), Noted (the author will
-      look into it), and Skip. There is nothing to draft.
-  - The section comes from the scale of the problem, the buttons from the kind of card. An
-    unclear reference is a line-level Suggestion even when fixing it needs new
-    words.
-- Order cards by importance in Structure and Facts, and in reading order in Fixes and
-  Suggestions, so the author can apply them top to bottom.
-- Before publishing, check that every `before` occurs exactly once in the file.
+## 6. Show the results
 
-After publishing, say in chat how many cards there are in each section and that they are
-above the composer. Don't repeat the read or the cards in chat.
+Publish one Impromptu UI view under the key `copy-edit-<slug>`, where the slug is the file
+name, or the folder name for an `index.md` (a Hugo page bundle), with `--replaces
+copy-edit-<slug>-scope`. Follow the impromptu-ui skill's "Propose corrections to a document"
+pattern and check `bb impromptu-ui schema` for fields. Write the JSON under
+`/tmp/copy-edit/<slug>/`.
+
+### Whole piece and One section
+
+- `summary`: a link to the file, then, in short paragraphs:
+  1. The main point, in one sentence, and the reader you assumed, so the author can correct
+     either.
+  2. The answer to what the author said they suspected.
+  3. The root problems, most important first, each in two or three sentences that point at
+     paragraphs by quoting their first few words.
+  4. What's working, quoted.
+- **Outline** section, first: one item titled "Outline: now and proposed". Its `changes`
+  entry has the label "Outline", `before` as the reverse outline from step 2 (one numbered
+  line per paragraph, its job in brackets, broken joints marked "↯ no link to the
+  previous"), and `after` as the outline with the proposed moves, cuts, and additions made,
+  new paragraphs marked "[new]". The diff shows the author the shape of the change at a
+  glance. Buttons: Looks right (`primary`), Revise (`"repeat": true`, `{note}`) for "you
+  misread what this paragraph is for." This item is a plan, not an edit: never apply it to
+  the file.
+- **Structure** section: a card for each change that carries out the proposed outline, in
+  the order the author should make them. Each card says which root problem it fixes.
+  - A move: one change removing the passage, one inserting it where it goes, the author's
+    words unchanged.
+  - A cut: the passage, with `after` of `""`.
+  - A repeat: keep the version that says more and delete the other. If the deleted one has a
+    sentence the kept one lacks, move that sentence over as a second change.
+  - A missing joint, entrance, exit, or example: a `draft` card (below) with a one- or
+    two-sentence bridge built from the author's words and notes, with a bracketed blank,
+    such as "[number] procedures", for facts only the author knows.
+  - A paragraph that does two jobs: a split, by inserting a paragraph break.
+  - A sentence that should be reworded, such as a transition whose "this" points at nothing:
+    a `draft` card whose `before` is that sentence and whose `draft` is the reworded one.
+  - A placeholder standing in for evidence, such as "(chart of test growth)": a `draft` card
+    replacing it with a sentence that says what the evidence shows, with bracketed blanks.
+    Other placeholders and notes get no cards.
+  - New prose where no prose sentence comes before it, such as a closing after the notes:
+    anchor on the heading it goes under, or on the first line of the notes and put the new
+    prose before them.
+- For One section, add **Fixes** and **Suggestions** sections for that section's line edit.
+- No line edits outside the section, and none at all for Whole piece. Keep any you notice in
+  your notes, and say in chat that a line edit can follow once the structure settles.
+
+### Line edit and Fact check
+
+- `summary`: a link to the file, then a sentence or two on the pattern, such as "Most of the
+  passive voice is in the second half," then the list of placeholders, or for a fact check
+  the paragraph of what you checked and found correct.
+- Sections, leaving out empty ones: **Facts** (wrong or unverifiable claims, links, images),
+  **Fixes** (mechanical and consistency errors with a clear right answer), **Suggestions**
+  (passive voice, unclear references, rule breaks: calls the author may disagree with).
+
+### Every card
+
+- `title`: where it is and what's wrong, such as "Postgres intro: doubled space".
+- `summary`: one line on why. For a fact, quote the source.
+- `changes`: `{ "label": "<file> › <heading>", "before": ..., "after": ... }`. Use "Opening"
+  for text before the first heading and "Frontmatter" for the front matter.
+  - `before` is the shortest exact span that contains the problem and occurs once in the
+    file, copied character for character. A one-word fix never quotes a paragraph. To delete
+    a paragraph, include its trailing blank line.
+  - `after` is `before` with only the fix applied.
+  - One problem per card, and no two cards' `before` spans overlap, so any card can be
+    applied or skipped without breaking another. List a card's deletions before its
+    insertions.
+- A **`draft` card** adds or rewords. Its change has a `before` and no `after`; the item's
+  `draft` is the replacement for `before`. To add a sentence, `before` is the sentence the
+  new one follows and `draft` is that sentence plus the addition. Impromptu
+  UI shows the insertion as a diff with an Edit tab, so the author can rewrite it before
+  applying.
+- `note` with a placeholder, and buttons whose `text` names the card id and what it does:
+  - A card with `changes`: Apply (`primary`), Skip, Revise (`"repeat": true`, `{note}`).
+  - A `draft` card: Apply (`primary`, with `{draft}` in its text), Skip, Revise.
+  - A claim you couldn't verify: Checked, it's right (`primary`), Noted, Skip.
+- Order Structure cards in the order the author should make them, Facts by importance, and
+  Fixes and Suggestions in reading order.
+- Authors keep writing while you read. Read the file again just before publishing, drop or
+  rebuild cards whose text changed, and check that every `before` occurs exactly once.
+
+After publishing, say in chat how many cards are in each section and that they're above the
+composer. Don't repeat the summary or the cards in chat.
 
 ## 7. Act on each button
 
-- **Apply**: read the file again, since the author may have kept writing while the cards were
-  open. Replace `before` with `after`, or with the `{draft}` text the button sent for a draft
-  card, and nothing else. Any exact-match replacement works: the Edit tool, or a script that
-  first checks `before` occurs exactly once. Match on the text, not line numbers. If `before` is no longer in the file, tell the user and mark
-  the card `{ "label": "Text changed", "tone": "warning" }` rather than guessing.
-- **Skip**, **Noted**, and **Checked, it's right**: change nothing. For Checked, add the
-  claim to the read's "checked and correct" paragraph on the next round.
-- **Revise**: publish the item again under the same `id` with the new suggestion.
+- **Apply**: read the file again, since the author may have kept writing. Replace `before`
+  with `after`, or with the `{draft}` text the button sent, and nothing else, matching on
+  text, not line numbers. If `before` is gone, tell the user and mark the card `{ "label":
+  "Text changed", "tone": "warning" }` rather than guessing.
+- **Skip**, **Noted**, **Checked, it's right**, **Looks right**: change nothing.
+- **Revise**: publish the item again under the same `id` with the new suggestion. A Revise
+  on the outline can change the diagnosis: redo step 3 and republish the Structure cards
+  that depend on it.
 
-After each one, publish the view again under the same key, with that item's `status` set to
+After each one, publish the view again under the same key with that item's `status` set to
 `{ "label": "Applied", "tone": "success", "complete": true }`, `{ "label": "Skipped",
-"complete": true }`, or `{ "label": "Noted", "complete": true }`. Keep every handled card in
-the file so it reads as done instead of vanishing.
+"complete": true }`, or `{ "label": "Noted", "complete": true }`. Keep handled cards in the
+view so they read as done.
 
-## Running it again on the same file
-
-A second round publishes under the same key. Before publishing, read the current view with
-`bb impromptu-ui state --key copy-edit-<slug>` and:
-
-- Keep each open card whose `before` still occurs exactly once in the file, under its old
-  `id`, so the user's progress on it survives.
-- Drop cards already handled in an earlier round, and open cards whose text is gone.
-- Give new cards ids that no earlier round used.
+**A second round** on the same file: read `bb impromptu-ui state --key copy-edit-<slug>`,
+keep open cards whose `before` still occurs exactly once under their old ids, drop handled
+cards and cards whose text is gone, and give new cards ids no earlier round used.
 
 ## Common mistakes
 
 | Mistake | Instead |
 |---|---|
-| "Suggested:" followed by a rewritten paragraph | One card per problem, `after` changed only where the problem is |
-| A gap card with only prose and nothing to apply | Propose the sentence as an editable diff anchored on the sentence before it |
-| A long or voice-heavy proposed sentence | One or two plain sentences from the author's own words; brackets for facts only they know |
-| Changing a phrase because you'd say it differently | Leave it. Flag it only if it breaks a rule, is unclear, or is passive with a known actor |
-| Flattening a joke into plain words under the mannered-prose rule | A joke the reader gets is voice, not mannered prose |
-| Merging duplicates into a new paragraph you wrote | Keep the author's fuller version, delete the other |
+| Starting with typos when the author asked whether the piece flows | Ask the scope first; a whole-piece read has no line cards |
+| Structure feedback as a list of general questions ("Is the opening strong?") | Build the reverse outline and point at the paragraphs where the thread breaks |
+| A card per symptom of one problem | Find the root problem: one misplaced paragraph explains three broken joints |
+| Ignoring what the author said they suspected | Answer it by name in the summary, even to disagree |
+| "Suggested:" followed by a rewritten paragraph | Moves and cuts of the author's words, plus short bridge sentences as editable drafts |
+| Changing a phrase because you'd say it differently | Leave it unless it breaks a rule, is unclear, or is passive with a known actor |
 | Line edits in the outline or notes at the end | Read notes as intent; never edit them |
-| Line edits in a paragraph a structural card cuts | Skip it |
 | Saying a link or image is wrong without opening it | Open it and quote what it shows |
-| Reporting a draft's frontmatter date as a factual error | Suggest the publish date |
-| Only criticizing | Say what's working in the read, so the author protects it |
-| Listing the read or the cards in chat | Above the composer |
+| Only criticizing | Say what's working, quoted, so the author protects it |
