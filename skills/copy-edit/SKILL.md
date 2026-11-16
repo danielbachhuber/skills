@@ -28,7 +28,7 @@ This is not `unslop` or `humanizer` (cut AI tells) or `claude-for-nonprofits:con
 
 **Ask the scope.** Skim the file first, so the question can name its sections. Then publish
 an inline Impromptu UI question (see the `bb-global-skills:impromptu-ui` skill, "Ask a
-question inline") under the key `copy-edit-<slug>-scope`, with two questions:
+question inline") under the key `copy-edit-<slug>-scope`, with three questions:
 
 1. "What kind of edit do you want on <title>?" Buttons: Whole piece (`primary` for a draft
    with an outline or notes still in it), One section, Line edit (`primary` for a draft that
@@ -36,6 +36,12 @@ question inline") under the key `copy-edit-<slug>-scope`, with two questions:
 2. "What do you already suspect isn't working?" Buttons: The flow, The argument, The opening
    or ending, Nothing in particular. The author can type their own answer in the
    "Something else…" field.
+3. "What's the one point you want readers to leave with?" Buttons: your best guess at the
+   thesis from the skim, as a short label with the full sentence in `detail` (`primary`),
+   and "Work it out from the draft". The author types their own in "Something else…". An
+   editor who guesses the point wrong gives a whole read aimed at the wrong piece, so
+   confirm it rather than infer it. Leave this question out when the request is plainly a
+   line edit or fact check.
 
 Skip the question when the request already says, such as "proofread this" (line edit) or
 "does this flow?" (whole piece). For One section, ask which section next, with up to four
@@ -70,7 +76,9 @@ links all hold can still be about the wrong thing.
 1. **What is it trying to be?** An argument, a report, a how-to, a story. Does the body
    deliver what the title and opening promise? A post titled as an essay that reads as a
    project status report has a problem no transition can fix.
-2. **The thesis.** Look for it anywhere: the title, the opening, a line in the middle, the
+2. **The thesis.** When the author stated the point, it is the thesis, even where the
+   draft argues something else: then the finding is that the draft doesn't yet make the
+   author's point, and where it drifts. Otherwise, look for it anywhere: the title, the opening, a line in the middle, the
    ending, the notes. Quote it in the author's words. If you find two that disagree, the
    piece may be two pieces; say so. If you find none, say so, and propose one built from
    the author's own sentences. Two that differ but fit together, such as a definition early
