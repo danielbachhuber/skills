@@ -35,7 +35,7 @@ For each finding, pick the cheapest fix that would have stopped it, in this orde
 
 Before reporting a finding, check in one shell command that the problem is still there and not already tracked: `grep -n` the target file in `{{CHECKOUT}}`, and `gh issue list --repo {{REPO}} --state open --search "<two or three keywords>"`. Drop the finding if the fix has landed. If an open issue covers it, report it anyway and name the issue on the `Tracked:` line.
 
-Report at most 5 findings, the ones that recur most, in under 700 words. Write the report to `{{REPORT}}` with a shell heredoc, then reply with only that path; if you cannot write files, reply with the report itself. Each finding takes this shape:
+Report at most 5 findings, the ones that recur most, in under 1,000 words; drop a finding rather than shorten the issue bodies. Write the report to `{{REPORT}}` with a shell heredoc, then reply with only that path; if you cannot write files, reply with the report itself. Each finding takes this shape:
 
 ```
 ### <imperative title, under 70 characters>

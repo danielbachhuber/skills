@@ -43,8 +43,8 @@ class MeasureTest(unittest.TestCase):
     def test_counts_comments_runs_and_rework(self):
         impact, warnings = measure(finding(refs={"comments": [11, 12, 21], "ciRuns": [900, 901]}),
                                    self.comments, self.runs, self.prs)
-        self.assertEqual(warnings, [])
-        # The author's own reply is not review feedback.
+        # The author's own reply is not review feedback, and the warning says why the count is lower.
+        self.assertEqual(warnings, ["comment 12 is the PR author's own and is not counted"])
         self.assertEqual(impact["comments"], 2)
         self.assertEqual(impact["reviewers"], 2)
         self.assertEqual(impact["prs"], 2)
@@ -58,12 +58,14 @@ class MeasureTest(unittest.TestCase):
     def test_waiting_counts_prs_not_summed_hours(self):
         impact, _ = measure(finding(signal="review wait", refs={"prs": [1, 2]}), self.comments, self.runs, self.prs)
         self.assertEqual((impact["waitingPrs"], impact["wholeWindow"], impact["longestWaitHours"]), (2, 1, 840))
-        self.assertIn("2 PRs waiting for a first review, 1 of them all week, the oldest for 35 days across 2 PRs",
+        self.assertIn("2 PRs waiting for a first review (1 of them all week, the oldest for 35 days) across 2 PRs",
                       describe(impact, 7))
 
     def test_review_load_is_one_persons_share_of_feedback(self):
-        impact, _ = measure(finding(signal="review load", refs={"reviewer": "ben", "prs": [1]}),
+        # No PRs cited: the reviewer's own PRs are the scope.
+        impact, _ = measure(finding(signal="review load", refs={"reviewer": "ben"}),
                             self.comments, self.runs, self.prs, 7, DATA)
+        self.assertEqual((impact["prs"], impact["authors"]), (1, 1))
         self.assertEqual((impact["reviewerItems"], impact["reviewerShare"], impact["waitingPrs"]), (1, 50, 0))
         self.assertIn("one reviewer wrote 50% of the review feedback (1 comments and summaries)", describe(impact, 7))
 

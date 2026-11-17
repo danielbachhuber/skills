@@ -34,7 +34,7 @@ When one person wrote most of the week's review feedback, that is a load finding
 
 Before reporting a finding, check in one shell command that the problem is still there and not already tracked: `grep -n` the target file in `{{CHECKOUT}}`, and `gh issue list --repo {{REPO}} --state open --search "<two or three keywords>"`. Drop the finding if the fix has landed. If an open issue covers it, report it anyway and name the issue on the `Tracked:` line.
 
-Report at most 5 findings, the ones that recur most, in under 700 words. Write the report to `{{REPORT}}` with a shell heredoc, then reply with only that path; if you cannot write files, reply with the report itself. Each finding takes this shape:
+Report at most 5 findings, the ones that recur most, in under 1,000 words; drop a finding rather than shorten the issue bodies. Write the report to `{{REPORT}}` with a shell heredoc, then reply with only that path; if you cannot write files, reply with the report itself. Each finding takes this shape:
 
 ```
 ### <imperative title, under 70 characters>
@@ -50,7 +50,7 @@ Evidence:
 > <verbatim comment text> (#<PR>, <comment id>, <reviewer>)
 Issue title: <the GitHub issue's title>
 Issue body:
-<the issue body, in markdown: no headings. Open with prose on what reviewers keep asking for and what it costs, citing PR numbers. Then what to change, in which files. Then a bulleted list of considerations if there are any. End with a "**Done is:**" line and a short bulleted list of concrete, checkable completion criteria. Refer to every pull request as its full title and number in one link, `[<title> (#<n>)](<url>)`, from the file's PR headings. Describe the requests, not the people: the issue is about the missing check or convention, and names no reviewer or author as the problem.>
+<the issue body, in markdown: no headings. Open with prose on what reviewers keep asking for and what it costs, citing PR numbers. Then what to change, in which files. Then a bulleted list of considerations if there are any. End with a "**Done is:**" line and a short bulleted list of concrete, checkable completion criteria. It must make sense to someone who has not read these pull requests, so name at least two of the PRs and say what the reviewer asked for on each. Refer to every pull request as its full title and number in one link, `[<title> (#<n>)](<url>)`, from the file's PR headings. Describe the requests, not the people: the issue is about the missing check or convention, and names no reviewer or author as the problem.>
 ```
 
 Do not count or estimate impact; a script measures it from the ids you cite. Cite every id that shows the pattern, since the ids are the measure.

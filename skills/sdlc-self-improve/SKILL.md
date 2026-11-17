@@ -25,7 +25,7 @@ Run this skill in a fresh thread, from a checkout of the repo, so reviewers can 
 
 2. **Review in parallel.** In one message, dispatch one subagent per `prompt-<n>.md`, one for `prompt-flow.md`, and one for `prompt-people.md` when it exists, each with the prompt `Read <output-dir>/prompt-<n>.md and do what it says.` The batch reviewers read the week one pull request at a time; the people reviewer reads it one code reviewer at a time, which finds a request a person makes once on each of several PRs in different batches. Each writes its report to `report-<n>.md`, `report-flow.md`, or `report-people.md` in the output directory and replies with the path. If a reply holds the report instead, save it there yourself. Keep the digests out of your own context. If a reviewer hit its call limit, list the pull requests it skipped as one observation; do not send another reviewer.
 
-3. **Merge.** Combine findings that share a target and a cause, and union their ids. A batch reviewer and the flow reviewer often reach the same CI fix from different sides, and a batch reviewer and the people reviewer the same review pattern; keep one finding with both sets of ids and evidence. A pattern seen in two batches is stronger than either alone, so merging is where most recurrence shows up. Drop a finding whose only evidence is one comment on one pull request; it goes under `observations`.
+3. **Merge.** Combine findings that share a target and a cause, and union their ids. A batch reviewer and the flow reviewer often reach the same CI fix from different sides, and a batch reviewer and the people reviewer the same review pattern; keep one finding with both sets of ids and evidence. A pattern seen in two batches is stronger than either alone, so merging is where most recurrence shows up. Give each id to one finding only: when two different fixes cite the same comment or run, keep it on the finding whose fix would have stopped it, since an id counted twice inflates both measures. Drop a finding whose only evidence is one comment on one pull request; it goes under `observations`.
 
    Reviewers' run lists for the same CI failure differ and can hold a mistyped id. When merging CI findings, take the run ids from `data.json` instead, selecting by workflow, job, and the error text that defines the finding:
    ```bash
@@ -36,7 +36,7 @@ Run this skill in a fresh thread, from a checkout of the repo, so reviewers can 
    ```bash
    python3 ~/.claude/skills/sdlc-self-improve/measure_findings.py <output-dir>/findings.json
    ```
-   It counts each finding's comments, reviewers, pull requests, authors, rework, failed CI runs and minutes, and review-wait hours from the ids, ranks the findings by how many pull requests they touched and then by cost, and prints one line each. Fix any `warning` about an id it could not find. Do not estimate impact yourself.
+   It counts each finding's comments, reviewers, pull requests, authors, rework, failed CI runs and minutes, and review-wait hours from the ids, ranks the findings by one score that weighs pull requests touched, rework, and cost (a review-load finding by the reviewer's share), and prints one line each. Fix any `warning` about an id it could not find. A warning that a comment is the PR author's own means it is not counted; keep it only if the reply is evidence, such as an author agreeing the check was missing. Do not estimate impact yourself.
 
 5. **Present.**
    ```bash

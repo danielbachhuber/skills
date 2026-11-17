@@ -25,7 +25,7 @@ Look for:
 
 Before reporting a finding, check in one shell command that it is not already tracked: `gh issue list --repo {{REPO}} --state open --search "<two or three keywords>"`. If an open issue covers it, report it anyway and name the issue on the `Tracked:` line.
 
-Report at most 4 findings in under 600 words. Write the report to `{{REPORT}}` with a shell heredoc, then reply with only that path; if you cannot write files, reply with the report itself. Use the same shape the batch reviewers use:
+Report at most 4 findings in under 900 words; drop a finding rather than shorten the issue bodies. Write the report to `{{REPORT}}` with a shell heredoc, then reply with only that path; if you cannot write files, reply with the report itself. Use the same shape the batch reviewers use:
 
 ```
 ### <imperative title, under 70 characters>
@@ -41,7 +41,7 @@ Evidence:
 > <the number, failing step, or error that shows it> (#<PR> or run <id>)
 Issue title: <the GitHub issue's title>
 Issue body:
-<the issue body, in markdown: no headings. Open with prose on what is happening and what it costs, citing the numbers. Then what to change. Then a bulleted list of considerations if there are any. End with a "**Done is:**" line and a short bulleted list of concrete, checkable completion criteria. Refer to every pull request as its full title and number in one link, `[<title> (#<n>)](<url>)`, from the jq output above.>
+<the issue body, in markdown: no headings. Open with prose on what is happening and what it costs, citing the numbers. Then what to change. Then a bulleted list of considerations if there are any. End with a "**Done is:**" line and a short bulleted list of concrete, checkable completion criteria. Refer to every pull request as its full title and number in one link, `[<title> (#<n>)](<url>)`, from the jq output above. Describe the process, not the people: write "one reviewer" or "the author", and name no reviewer or author.>
 ```
 
 Do not estimate impact; a script measures it from the run ids and PR numbers you cite.

@@ -31,7 +31,7 @@ def feedback_share(data, login):
         mine += n
         if n:
             prs.add(pr["number"])
-    return {"reviewer": login, "reviewerItems": mine, "reviewerPrs": len(prs),
+    return {"reviewer": login, "reviewerItems": mine, "reviewerPrs": sorted(prs),
             "reviewerShare": round(100 * mine / total) if total else 0}
 
 
@@ -56,6 +56,8 @@ def measure(finding, comments, runs, prs, days=7, data=None):
     for cid in refs.get("comments") or []:
         if cid in comments:
             cited.append(comments[cid])
+            if comments[cid][1]["byAuthor"]:
+                warnings.append(f"comment {cid} is the PR author's own and is not counted")
         else:
             warnings.append(f"comment {cid} not found")
     failed = []
@@ -75,6 +77,13 @@ def measure(finding, comments, runs, prs, days=7, data=None):
     affected.update({f["pr"]: prs[f["pr"]] for f in failed if f["pr"] in prs})
     affected.update({pr["number"]: pr for pr in named})
 
+    signal = finding.get("signal")
+    load = {}
+    if signal == "review load" and data and refs.get("reviewer"):
+        load = feedback_share(data, refs["reviewer"])
+        # The cost of load is every PR the reviewer gave feedback on.
+        affected.update({n: prs[n] for n in load.pop("reviewerPrs") if n in prs})
+
     # Rework: a cited comment the author answered with a later commit.
     rework = set()
     for pr, c in cited:
@@ -82,7 +91,6 @@ def measure(finding, comments, runs, prs, days=7, data=None):
         if any(parse_time(t) > at for t in pr.get("commitTimes", [])):
             rework.add(pr["number"])
     reviewers = {c["author"] for _, c in cited if not c["byAuthor"]}
-    signal = finding.get("signal")
     return {
         "comments": sum(1 for _, c in cited if not c["byAuthor"]),
         "reviewers": len(reviewers),
@@ -94,7 +102,7 @@ def measure(finding, comments, runs, prs, days=7, data=None):
         # Waiting counts only for review-wait findings, where it is the cost. Waits run
         # side by side, so the measure is how many PRs waited, not the sum of hours.
         **wait_impact(named if signal == "review wait" else [], days),
-        **(feedback_share(data, refs["reviewer"]) if signal == "review load" and data and refs.get("reviewer") else {}),
+        **load,
         "reverts": len(refs.get("reverts") or []),
         "bugs": len(refs.get("bugs") or []),
     }, warnings
@@ -130,10 +138,12 @@ def describe(impact, days):
     if impact.get("waitingPrs"):
         whole = impact["wholeWindow"]
         period_word = "week" if days == 7 else f"{days} days"
-        text = f"{impact['waitingPrs']} PR{'s' * (impact['waitingPrs'] != 1)} waiting for a first review"
-        if whole:
-            text += f", {whole} of them all {period_word}"
-        parts.append(text + f", the oldest for {duration(impact['longestWaitHours'])}")
+        # The details go in parentheses so the oldest wait does not read as
+        # belonging to the "across N PRs" scope that follows.
+        details = [f"{whole} of them all {period_word}"] if whole else []
+        details.append(f"the oldest for {duration(impact['longestWaitHours'])}")
+        parts.append(f"{impact['waitingPrs']} PR{'s' * (impact['waitingPrs'] != 1)} "
+                     f"waiting for a first review ({', '.join(details)})")
     if impact["reverts"]:
         parts.append(f"{impact['reverts']} revert{'s' * (impact['reverts'] != 1)}")
     if impact["bugs"]:
@@ -153,13 +163,15 @@ def rank_key(finding):
     A PR touched or reworked counts 2, a review comment 1, a failed CI run 0.5
     plus a point per 10 minutes it ran, a PR that waited the whole window 2, and
     a revert or bug 5. Concentrated CI cost on one PR can then outrank a few
-    comments spread over several.
+    comments spread over several. A review-load finding's PRs are the reviewer's
+    reach, not a cost, so it ranks on its share: half the feedback scores 25.
     """
     i = finding.get("impact") or {}
+    if finding.get("signal") == "review load":
+        return i.get("reviewerShare", 0) / 2
     return (2 * i.get("prs", 0) + i.get("comments", 0) + 2 * i.get("reworkPrs", 0)
             + 0.5 * i.get("ciFailures", 0) + i.get("ciMinutes", 0) / 10
-            + 2 * i.get("wholeWindow", 0) + 5 * (i.get("reverts", 0) + i.get("bugs", 0))
-            + i.get("reviewerShare", 0) / 5)
+            + 2 * i.get("wholeWindow", 0) + 5 * (i.get("reverts", 0) + i.get("bugs", 0)))
 
 
 def main(path):
