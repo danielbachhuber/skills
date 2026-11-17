@@ -13,7 +13,7 @@ A suggestion is only useful if it recurs across pull requests, names the file or
 
 ## Stages
 
-The skill reads the week as a flow of work through delivery stages, following the [AI-native SDLC research brief](https://github.com/danielbachhuber/ai-native-sdlc/blob/main/docs/ai-native-sdlc-research.md). Agents make code cheaper to write, so the step that limits delivery moves to deciding, reviewing, testing, and releasing. Work piles up at the limiting step, and speeding up any other step does not help (the Theory of Constraints, from *The Goal*). DORA's research adds that AI use tends to grow change size, which slows review and makes releases less stable, so small batches and fast feedback matter more, not less.
+The skill reads the week as a flow of work through delivery stages, following the [AI-native SDLC](https://danielbachhuber.github.io/ai-native-sdlc/). Agents make code cheaper to write, so the step that limits delivery moves to deciding, reviewing, testing, and releasing. Work piles up at the limiting step, and speeding up any other step does not help (the Theory of Constraints, from *The Goal*). DORA's research adds that AI use tends to grow change size, which slows review and makes releases less stable, so small batches and fast feedback matter more, not less.
 
 Each finding names the stage where it costs time today; its fix may act earlier. The cards are grouped by stage, with the limiting step first.
 

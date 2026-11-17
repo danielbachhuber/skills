@@ -165,8 +165,8 @@ def to_view(findings, data, date=""):
     lines = [f"- **{STAGE_TITLES[st]}:** {notes[st]}" for st in STAGES if notes.get(st) and st != limiting]
     if lines:
         summary += "\n\n**Other stages**\n\n" + "\n".join(lines)
-    summary += ("\n\nStages follow the [AI-native SDLC research brief]"
-                "(https://github.com/danielbachhuber/ai-native-sdlc/blob/main/docs/ai-native-sdlc-research.md).")
+    summary += ("\n\nStages follow the [AI-native SDLC]"
+                "(https://danielbachhuber.github.io/ai-native-sdlc/).")
     title = f"SDLC self-improve: {repo}" + (f", {date}" if date else "")
     return {"title": title, "summary": summary, "sections": sections}
 
