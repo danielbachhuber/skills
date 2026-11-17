@@ -1,6 +1,6 @@
 ---
 name: copy-edit
-description: Use when the user asks to copy edit, edit, proofread, fact-check, critique, or give a read to a piece of their own writing, such as a blog post draft, essay, newsletter, or doc, at any stage from rough draft to final, whether they want feedback on the whole piece's structure, flow, and argument, on one section, or a line edit for typos, grammar, passive voice, consistency, unclear references, and breaks of their writing rules, or a check of facts, links, and images.
+description: Use when the user asks to copy edit, edit, proofread, fact-check, critique, or give a read to a piece of their own writing, such as a blog post draft, essay, newsletter, or doc, at any stage from rough draft to final, whether they want feedback on the whole piece's structure, flow, and argument, on one section, or a line edit for typos, grammar, passive voice, indirect sentences, consistency, unclear references, and breaks of their writing rules, or a check of facts, links, and images.
 ---
 
 # Copy edit
@@ -18,7 +18,7 @@ their time, and a flow read buried under forty typo cards gets skipped.
 |---|---|---|
 | **Whole piece** | What is the piece trying to be, and does it get there? Is the thesis clear, the strongest material up front, and each section earning its place? What shapes could it take? | 1, 2, 3, 6 |
 | **One section** | The same questions for one section, judged against the piece's thesis, then a line edit of it | 1, 2, 3, 4, 6 |
-| **Line edit** | Typos, grammar, passive voice, consistency, unclear references, the author's writing rules | 1, 4, 6 |
+| **Line edit** | Typos, grammar, passive voice, indirect sentences, consistency, unclear references, the author's writing rules | 1, 4, 6 |
 | **Fact check** | Are the names, numbers, quotes, links, and images right? | 1, 5, 6 |
 
 This is not `unslop` or `humanizer` (cut AI tells) or `claude-for-nonprofits:content-review`
@@ -132,7 +132,9 @@ Read every sentence of prose for:
 | Mechanical | Typos, doubled spaces, doubled words, punctuation, subject-verb agreement, dangling modifiers, mixed comparisons ("equally valuable as"), "-ly" adverb hyphens |
 | Consistency | Spelling of names and products, capitalization, italics for titles, one term used two ways |
 | Passive voice | "Every pull request is reviewed by a human" where the actor is known. Suggest the active form, naming the actor and keeping the author's other words. Leave passive where the actor is unknown or beside the point |
-| Unclear references | A name, acronym, or "we" the reader hasn't been told about yet, a "this" with no clear antecedent |
+| Indirect sentences | A sentence that starts from an abstraction or a general category, so the reader has to work out who does what. "The server does work outside the request that asks for it because the work is slow or calls a service that can fail" meant "We currently have our own home-built queue system to process machine translations of user content." "How PSI ships constrains the choice" meant "The library has to fit how PSI ships." Put the actor first, often "we", and name the specific thing rather than its category. An active sentence can still be indirect |
+| Sentences about the document | "Each item links to the pull request that added it," "This section explains…" They describe the page instead of the subject. Suggest cutting them |
+| Unclear references | A name, acronym, or "we" the reader hasn't been told about yet, a "this" with no clear antecedent. In a proposal, a sentence about how things work today that could be read as the proposed change: add "currently" |
 | Author's rules | Em dashes, mannered phrasing, jargon, assumed context |
 
 Do not make a card for:
@@ -155,6 +157,9 @@ Check every factual claim in the prose against its source and quote the source o
   rounded ("about 60").
 - **Claims with no source**: search the web for general claims; check the author's claims
   about their own work against what you can reach, such as a design doc in the repo.
+- **Claims about history or cause**, such as "we added each of these after a production
+  problem": link the pull request, issue, or commit behind each one, and check the claim
+  holds for every item it covers, not only most of them.
 - **Dates against each other**. A draft's frontmatter date is often the day the author
   started, so a mismatch with it is a suggestion to set the publish date, not an error.
 - **Images and charts**: the numbers and labels match what the text says about them, axes
@@ -286,6 +291,15 @@ After each one, publish the view again under the same key with that item's `stat
 "complete": true }`, or `{ "label": "Noted", "complete": true }`. Keep handled cards in the
 view so they read as done.
 
+**When the author rewrites a sentence**, on a card or in chat, their version shows what they
+want. Without waiting to be asked:
+
+- Find other sentences with the same problem and offer cards for them, saying in one line
+  what pattern you took from their rewrite.
+- Carry their change through: a new word for a term replaces the old one elsewhere
+  ("hand-built" becoming "home-built"), and an "it" or "this" whose antecedent changed gets
+  fixed.
+
 **A second round** on the same file: read `bb impromptu-ui state --key copy-edit-<slug>`,
 keep open cards whose `before` still occurs exactly once under their old ids, drop handled
 cards and cards whose text is gone, and give new cards ids no earlier round used.
@@ -302,7 +316,9 @@ cards and cards whose text is gone, and give new cards ids no earlier round used
 | A card per symptom of one problem | Find the root problem: one misplaced paragraph explains three broken links |
 | Ignoring what the author said they suspected | Answer it by name in the summary, even to disagree |
 | "Suggested:" followed by a rewritten paragraph | Moves and cuts of the author's words, plus short bridge sentences as editable drafts |
-| Changing a phrase because you'd say it differently | Leave it unless it breaks a rule, is unclear, or is passive with a known actor |
+| Changing a phrase because you'd say it differently | Leave it unless it breaks a rule, is unclear, is indirect, or is passive with a known actor |
+| Treating passive voice as the only directness problem | Also flag active sentences that start from an abstraction; the author had to ask for these |
+| Rewriting an indirect sentence into another general one ("Some work is too slow to finish inside a request, so the server queues it") | Name the specific thing, as the author did: "our own home-built queue system to process machine translations" |
 | Line edits in the outline or notes at the end | Read notes as intent; never edit them |
 | Saying a link or image is wrong without opening it | Open it and quote what it shows |
 | Only criticizing | Say what's working, quoted, so the author protects it |
