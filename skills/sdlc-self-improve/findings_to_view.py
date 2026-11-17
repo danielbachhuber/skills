@@ -15,6 +15,22 @@ import json
 import os
 import sys
 
+# Delivery stages, in the order work moves through them. The stage is where a
+# finding costs time today; the fix may act earlier.
+STAGES = ["plan", "build", "review", "test", "release", "learn"]
+STAGE_TITLES = {"plan": "Plan", "build": "Build", "review": "Review", "test": "Test and CI",
+                "release": "Release", "learn": "Learn"}
+DEFAULT_STAGE = {
+    "repeated review feedback": "review", "review wait": "review", "review load": "review",
+    "rework": "review", "batch size": "build", "CI friction": "test", "escaped defect": "release",
+}
+
+
+def stage_of(finding):
+    stage = (finding.get("stage") or "").lower()
+    return stage if stage in STAGES else DEFAULT_STAGE.get(finding.get("signal"), "review")
+
+
 TONES = {
     "escaped defect": "danger",
     "CI friction": "warning",
@@ -22,6 +38,7 @@ TONES = {
     "repeated review feedback": "info",
     "review wait": "info",
     "review load": "info",
+    "batch size": "warning",
 }
 
 
@@ -61,10 +78,10 @@ def card(position, finding, repo):
         "id": f"finding-{position}",
         "title": finding["title"],
         "badges": [
-            {"label": finding["signal"], "tone": TONES.get(finding["signal"], "neutral")},
-            {"label": finding["fix"], "tone": "neutral"},
             {"label": f"~{hours:g}h/week" if hours else "not measured", "tone": "neutral"},
             {"label": f"{finding.get('effort', 'medium')} effort", "tone": "neutral"},
+            {"label": finding["signal"], "tone": TONES.get(finding["signal"], "neutral")},
+            {"label": finding["fix"], "tone": "neutral"},
             {"label": f"{prs} PR{'' if prs == 1 else 's'}", "tone": "neutral"},
         ],
         "summary": "\n\n".join(summary),
@@ -122,14 +139,20 @@ def headline(findings, data):
     merged = sum(1 for pr in prs if pr["mergedAt"])
     return (f"{len(findings['findings'])} suggestions from {findings.get('reviewedCount', '?')} of {len(prs)} "
             f"pull requests in `{data['repo']}` over {data['days']} days ({merged} merged, "
-            f"{len(data['ci']['failures'])} failed CI runs), ranked by the estimated hours a week each costs. "
+            f"{len(data['ci']['failures'])} failed CI runs), grouped by the stage where each costs time, limiting step first, and ranked within a stage by estimated hours a week. "
             f"Edit an issue body before you draft it.")
 
 
 def to_view(findings, data, date=""):
     repo = data["repo"]
-    items = [card(i + 1, f, repo) for i, f in enumerate(findings["findings"])]
-    sections = [{"title": "Suggestions", "items": items}]
+    limiting = (findings.get("constraintStage") or "").lower()
+    by_stage = {}
+    # Numbered in rank order across all stages, so ids stay stable and match findings.json.
+    for i, f in enumerate(findings["findings"]):
+        by_stage.setdefault(stage_of(f), []).append(card(i + 1, f, repo))
+    order = ([limiting] if limiting in by_stage else []) + [st for st in STAGES if st in by_stage and st != limiting]
+    sections = [{"title": STAGE_TITLES[st] + (" (limiting step)" if st == limiting else ""), "items": by_stage[st]}
+                for st in order]
     observations = findings.get("observations") or []
     if observations:
         sections.append({"title": "Seen once", "items": [
@@ -138,6 +161,12 @@ def to_view(findings, data, date=""):
             for i, o in enumerate(observations)]})
     flow = findings.get("constraint")
     summary = headline(findings, data) + (f"\n\n**Limiting step:** {flow}" if flow else "")
+    notes = findings.get("stages") or {}
+    lines = [f"- **{STAGE_TITLES[st]}:** {notes[st]}" for st in STAGES if notes.get(st) and st != limiting]
+    if lines:
+        summary += "\n\n**Other stages**\n\n" + "\n".join(lines)
+    summary += ("\n\nStages follow the [AI-native SDLC research brief]"
+                "(https://github.com/danielbachhuber/ai-native-sdlc/blob/main/docs/ai-native-sdlc-research.md).")
     title = f"SDLC self-improve: {repo}" + (f", {date}" if date else "")
     return {"title": title, "summary": summary, "sections": sections}
 

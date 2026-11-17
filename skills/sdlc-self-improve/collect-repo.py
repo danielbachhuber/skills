@@ -42,7 +42,7 @@ query($q: String!, $cursor: String) {
     nodes {
       ... on PullRequest {
         number title url state isDraft createdAt mergedAt closedAt
-        additions deletions changedFiles headRefName
+        additions deletions changedFiles headRefName body
         author { login __typename }
         timelineItems(first: 50, itemTypes: [READY_FOR_REVIEW_EVENT, HEAD_REF_FORCE_PUSHED_EVENT]) {
           nodes {
@@ -51,7 +51,7 @@ query($q: String!, $cursor: String) {
             ... on HeadRefForcePushedEvent { createdAt }
           }
         }
-        commits(last: 100) { nodes { commit { committedDate } } }
+        commits(last: 100) { nodes { commit { committedDate message } } }
         reviewRequests(first: 20) {
           nodes { requestedReviewer { __typename ... on User { login } ... on Team { slug } ... on Bot { login } } }
         }
@@ -130,6 +130,24 @@ def fetch_prs(repo, since):
         cursor = page["pageInfo"]["endCursor"]
 
 
+# Signs an agent wrote or co-wrote the PR: its trailer or footer, or its branch prefix.
+AGENT_TEXT = re.compile(r"Co-Authored-By: *(Claude|Codex|Copilot|Cursor|Devin|Gemini|Aider)|"
+                        r"Generated with \[?(Claude Code|Codex|Cursor)", re.I)
+AGENT_BRANCH = re.compile(r"^(claude|codex|copilot|cursor|devin|agent)[/-]", re.I)
+
+
+def agent_assisted(raw):
+    texts = [raw.get("body") or ""] + [n["commit"].get("message") or "" for n in raw["commits"]["nodes"]]
+    return bool(AGENT_BRANCH.match(raw["headRefName"] or "") or any(AGENT_TEXT.search(t) for t in texts))
+
+
+def with_comments(review, comments):
+    """An approval that came with inline comments, posted in the hour before it."""
+    at = parse_time(review["at"])
+    return any(c["author"] == review["author"] and c["kind"] == "review"
+               and 0 <= (at - parse_time(c["at"])).total_seconds() <= 3600 for c in comments)
+
+
 def normalize_pr(raw, since, now):
     author, author_is_bot = login(raw)
     created = parse_time(raw["createdAt"])
@@ -186,7 +204,7 @@ def normalize_pr(raw, since, now):
     return {
         "number": raw["number"], "title": raw["title"], "url": raw["url"],
         "author": author, "authorIsBot": author_is_bot, "state": raw["state"],
-        "isDraft": raw["isDraft"], "branch": raw["headRefName"],
+        "isDraft": raw["isDraft"], "branch": raw["headRefName"], "agentAssisted": agent_assisted(raw),
         "size": {"additions": raw["additions"], "deletions": raw["deletions"], "files": raw["changedFiles"]},
         "createdAt": raw["createdAt"], "readyAt": ready.isoformat() if ready else None,
         "mergedAt": raw["mergedAt"], "closedAt": raw["closedAt"],
@@ -198,7 +216,7 @@ def normalize_pr(raw, since, now):
         "hoursWaitingTotal": hours(ready, end_of_wait) if ready and end_of_wait > max(ready, since) else 0,
         "hoursReadyToMerge": hours(ready, merged) if ready and merged else None,
         "rounds": sum(1 for r in reviews if r["inWindow"] and r["followedByCommit"]
-                      and r["state"] in ("CHANGES_REQUESTED", "COMMENTED")),
+                      and (r["state"] in ("CHANGES_REQUESTED", "COMMENTED") or with_comments(r, comments))),
         "forcePushes": force_pushes,
         # Pending requests now: people or teams the PR is waiting on.
         "awaitingReviewFrom": [r["requestedReviewer"].get("login") or "team:" + r["requestedReviewer"].get("slug", "?")
@@ -393,6 +411,39 @@ def median(values):
     return round(statistics.median(values), 1) if values else None
 
 
+LARGE_PR_LINES = 500
+
+
+def lines_changed(pr):
+    return pr["size"]["additions"] + pr["size"]["deletions"]
+
+
+def compare(label, group):
+    if not group:
+        return f"- {label}: none"
+    return (f"- {label}: {len(group)} PRs, median {median(lines_changed(pr) for pr in group)} lines, "
+            f"median {median(pr['hoursReadyToMerge'] for pr in group)}h ready to merge, "
+            f"{sum(1 for pr in group if pr['rounds'])} with a review round answered with commits")
+
+
+def stage_report(merged):
+    """Batch size and agent use for merged PRs, which the build stage controls."""
+    large = [pr for pr in merged if lines_changed(pr) > LARGE_PR_LINES]
+    small = [pr for pr in merged if lines_changed(pr) <= LARGE_PR_LINES]
+    agent = [pr for pr in merged if pr["agentAssisted"]]
+    other = [pr for pr in merged if not pr["agentAssisted"]]
+    lines = ["", "## Build: change size and agent use (merged PRs)", "",
+             f"- Median lines changed: {median(lines_changed(pr) for pr in merged)}",
+             compare(f"Over {LARGE_PR_LINES} lines", large), compare(f"{LARGE_PR_LINES} lines or fewer", small),
+             compare("Agent-assisted (trailer, footer, or branch prefix)", agent), compare("Not marked as agent-assisted", other),
+             "", "Largest merged:", ""]
+    lines += [f"- #{pr['number']} {pr['title']} · +{pr['size']['additions']}/-{pr['size']['deletions']} in "
+              f"{pr['size']['files']} files · {pr['hoursReadyToMerge']}h · {pr['rounds']} rounds"
+              + (" · agent-assisted" if pr["agentAssisted"] else "")
+              for pr in sorted(merged, key=lines_changed, reverse=True)[:5]] or ["- none"]
+    return lines
+
+
 def flow_report(repo, days, prs, ci, reverts, bugs):
     humans = [pr for pr in prs if not pr["authorIsBot"]]
     merged = [pr for pr in humans if pr["mergedAt"]]
@@ -451,6 +502,7 @@ def flow_report(repo, days, prs, ci, reverts, bugs):
                      f"{round(100 * n / total) if total else 0}% of all feedback")
     if not people:
         lines.append("- none")
+    lines += stage_report(merged)
     lines += ["", "## Reverts and hotfixes", ""]
     lines += [f"- {r['subject']} ({r['url']})" for r in reverts] or ["- none"]
     lines += ["", "## Bug issues opened", ""]

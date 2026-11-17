@@ -11,6 +11,23 @@ Read a repo's past week on GitHub: pull requests, review comments, review rounds
 
 A suggestion is only useful if it recurs across pull requests, names the file or workflow to change, cites the comment or run ids that show it, and still holds against the current code. Prefer a deterministic fix to a written rule: a lint rule or CI check costs nothing per pull request, and a rule in `AGENTS.md` relies on someone reading it.
 
+## Stages
+
+The skill reads the week as a flow of work through delivery stages, following the [AI-native SDLC research brief](https://github.com/danielbachhuber/ai-native-sdlc/blob/main/docs/ai-native-sdlc-research.md). Agents make code cheaper to write, so the step that limits delivery moves to deciding, reviewing, testing, and releasing. Work piles up at the limiting step, and speeding up any other step does not help (the Theory of Constraints, from *The Goal*). DORA's research adds that AI use tends to grow change size, which slows review and makes releases less stable, so small batches and fast feedback matter more, not less.
+
+Each finding names the stage where it costs time today; its fix may act earlier. The cards are grouped by stage, with the limiting step first.
+
+| Stage | What GitHub shows | Suggestions that fit |
+|---|---|---|
+| `plan` | Review questioning the approach, PRs rewritten after their direction changed, open questions in design docs | A small design or schema PR before the code, an issue template that asks for the decision, a plan step for agents before they write code |
+| `build` | Change size, agent-assisted PRs and their review rounds, conventions missed | Stacked or smaller PRs, a size warning in CI, agent instructions, lint rules and pre-commit hooks |
+| `review` | Waits for a first review, one reviewer carrying the load, the same request on PR after PR | CODEOWNERS and auto-assignment, an agent first-pass review, checks that take repeated requests off reviewers |
+| `test` | CI failing for causes a local check would catch, flaky checks, slow feedback | Run the check before push, fix or quarantine the flaky test, a faster job |
+| `release` | Reverts and hotfixes | A test for the path that broke, smaller releases, feature flags |
+| `learn` | Bug issues | A test per escaped bug. Outcomes after release are not in GitHub; say so instead of guessing |
+
+Measures describe the system, never rank people. Leave out raw code volume and agent activity as signs of progress; they can rise while delivery gets worse.
+
 ## Workflow
 
 Run this skill in a fresh thread, from a checkout of the repo, so reviewers can check the current files.
@@ -43,7 +60,7 @@ Run this skill in a fresh thread, from a checkout of the repo, so reviewers can 
    python3 ~/.claude/skills/sdlc-self-improve/findings_to_view.py <output-dir>/findings.json > <output-dir>/view.json
    bb impromptu-ui publish --file <output-dir>/view.json --key sdlc-self-improve
    ```
-   Each suggestion becomes a card with its impact, why the fix works, evidence, and the issue body as a draft the user can edit. In chat, say how many pull requests were scanned and reviewed, how many suggestions there are, the limiting step, and the top three by estimated hours a week, with each one's effort, and point to the cards. Say the hours are an estimate from per-event minutes, not a measurement. Do not repeat the list. If `publish` prints a validation error, fix `findings.json` and run both commands again. If `bb impromptu-ui` is not available, write the cards to `findings.md` in the output directory, show it numbered, and ask which to draft.
+   Each suggestion becomes a card with its impact, why the fix works, evidence, and the issue body as a draft the user can edit. In chat, say how many pull requests were scanned and reviewed, how many suggestions there are, the limiting step and its stage, and the top three by estimated hours a week, with each one's effort, and point to the cards. Say the hours are an estimate from per-event minutes, not a measurement. Do not repeat the list. If `publish` prints a validation error, fix `findings.json` and run both commands again. If `bb impromptu-ui` is not available, write the cards to `findings.md` in the output directory, show it numbered, and ask which to draft.
 
 6. **When the user presses Draft issue**, the message carries the issue title and the body as they edited it. Load `draft-issue-description` and follow its rules for the body: prose context with no headings, then considerations, then the `**Done is:**` list. Write it to `~/projects/drafts/issue-<repo>-<slug>.md`, with the title as the first line (`# <title>`), and link it by absolute path. Set the finding's `state.draftPath` in `findings.json` and republish with the same two commands; the card then shows the draft and a **File issue** button. If the draft file exists when Revise is pressed later, rewrite it too. Do not file anything yet.
 
@@ -60,11 +77,17 @@ Run this skill in a fresh thread, from a checkout of the repo, so reviewers can 
 ```json
 {
   "reviewedCount": 40,
-  "constraint": "Human review: median 18.6h from ready to first review while CI reports in under 10 minutes",
+  "constraint": "Median 18.6h from ready to first human review, out of 26.9h to merge, while CI reports in under 10 minutes",
+  "constraintStage": "review",
+  "stages": {
+    "build": "Merged PRs over 500 lines took a median 41h to merge against 12h for smaller ones",
+    "learn": "No bug issues this week; outcomes after release are not in GitHub"
+  },
   "findings": [
     {
       "title": "Run the formatter in a pre-commit hook",
       "signal": "CI friction",
+      "stage": "test",
       "fix": "CI change",
       "effort": "small",
       "target": ".husky/pre-commit",
@@ -82,7 +105,7 @@ Run this skill in a fresh thread, from a checkout of the repo, so reviewers can 
 }
 ```
 
-`signal` is one of `repeated review feedback`, `CI friction`, `rework`, `escaped defect`, `review wait`, `review load`. A `review load` finding sets `refs.reviewer` to the login from the people reviewer's `Reviewer:` line; its impact is that person's share of the week's review feedback. `effort` is the reviewer's `Effort:` line, `small`, `medium`, or `large`; when reviewers disagree, take the larger. `fix` is one of `lint rule`, `CI change`, `test`, `agent instructions`, `PR template`, `docs`, `process`. `refs` holds the reviewers' `Comments`, `CI runs`, and `PRs` lines as numbers; `reverts` and `bugs` hold commit SHAs and issue numbers from `flow.md`. `prs` counts toward review-wait hours only when `signal` is `review wait`. `tracked` is the reviewer's `Tracked:` line, empty when none. Evidence from a review comment or CI run has its `url` and `author`; evidence from the flow numbers leaves out `author`, and leaves out `pr` and `url` when it is about no single pull request. `constraint` is the flow reviewer's last line. `evidence` URLs come from the digest's comment or run. `measure_findings.py` adds `impact` and `impactLine`. `state` starts empty; steps 6 and 7 fill in `draftPath` and `issueUrl`. At most 20 findings.
+`signal` is one of `repeated review feedback`, `CI friction`, `rework`, `escaped defect`, `review wait`, `review load`, `batch size`. A `batch size` finding cites the large PRs in `refs.prs`; the ones that needed a review round count as rework. `stage` is the reviewer's `Stage:` line, one of `plan`, `build`, `review`, `test`, `release`, `learn`; when merged findings disagree, take the stage where most of the cited cost lands. A `review load` finding sets `refs.reviewer` to the login from the people reviewer's `Reviewer:` line; its impact is that person's share of the week's review feedback. `effort` is the reviewer's `Effort:` line, `small`, `medium`, or `large`; when reviewers disagree, take the larger. `fix` is one of `lint rule`, `CI change`, `test`, `agent instructions`, `PR template`, `docs`, `process`. `refs` holds the reviewers' `Comments`, `CI runs`, and `PRs` lines as numbers; `reverts` and `bugs` hold commit SHAs and issue numbers from `flow.md`. `prs` counts toward review-wait hours only when `signal` is `review wait`. `tracked` is the reviewer's `Tracked:` line, empty when none. Evidence from a review comment or CI run has its `url` and `author`; evidence from the flow numbers leaves out `author`, and leaves out `pr` and `url` when it is about no single pull request. `constraint` is the text of the flow reviewer's `Limiting step:` line after the stage, and `constraintStage` is the stage. `stages` holds the flow reviewer's one line for each other stage, keyed by stage. `evidence` URLs come from the digest's comment or run. `measure_findings.py` adds `impact` and `impactLine`. `state` starts empty; steps 6 and 7 fill in `draftPath` and `issueUrl`. At most 20 findings.
 
 ## Common mistakes
 

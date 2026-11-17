@@ -104,8 +104,9 @@ def measure(finding, comments, runs, prs, days=7, data=None):
         # The cost of load is every PR the reviewer gave feedback on.
         affected.update({n: prs[n] for n in load.pop("reviewerPrs") if n in prs})
 
-    # Rework: a cited comment the author answered with a later commit.
-    rework = set()
+    # Rework: a cited comment the author answered with a later commit. For a
+    # batch-size finding, the cited large PRs that needed a review round.
+    rework = {pr["number"] for pr in named if signal == "batch size" and pr.get("rounds")}
     for pr, c in cited:
         at = parse_time(c["at"])
         if any(parse_time(t) > at for t in pr.get("commitTimes", [])):

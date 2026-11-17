@@ -18,6 +18,17 @@ Do not change files, comment on GitHub, or open issues.
 
 For each person, sort their comments into the kinds of thing they ask for, such as naming, error handling, missing tests, query performance, types, documentation, or scope. A kind of request that appears on three or more PRs by the same person, or on two or more PRs from two or more people, is a finding. Skip questions about a PR's own design and requests that only make sense for one change.
 
+Each finding also names the delivery stage where it costs time today:
+
+| Stage | Shows up as |
+|---|---|
+| `plan` | Review questioning the approach, a PR rewritten or closed after its direction changed, open questions left in a design doc |
+| `build` | Large pull requests, agent-assisted PRs reworked because the agent assumed wrong, conventions missed while writing |
+| `review` | Waits for review, one reviewer carrying the load, the same request on PR after PR |
+| `test` | CI failing for causes a local check would catch, flaky checks, slow feedback |
+| `release` | Reverts and hotfixes |
+| `learn` | Bug issues, incidents, no way to tell whether a change did what it was for |
+
 For each finding, pick the cheapest fix that would have stopped the request, in this order of preference, because a deterministic check costs nothing per pull request and a written rule relies on someone reading it:
 
 | Fix | When |
@@ -39,6 +50,7 @@ Report at most 5 findings, the ones that recur most, in under 1,000 words; drop 
 ```
 ### <imperative title, under 70 characters>
 Signal: repeated review feedback | review load
+Stage: plan | build | review | test | release | learn
 Fix: lint rule | CI change | test | agent instructions | PR template | docs | process
 Effort: small (half a day or less) | medium (one to three days) | large (a week or more)
 Target: <file path in the repo, or the workflow and job>

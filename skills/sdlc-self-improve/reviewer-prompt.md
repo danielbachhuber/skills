@@ -21,6 +21,17 @@ Look for these signals:
 3. **Rework.** Rounds of review answered with commits for the same cause, force pushes after review, a PR rewritten after a reviewer questioned its direction, which points at missing upfront guidance.
 4. **Escaped defects.** Review that caught a bug a test or check should have caught first.
 
+Each finding also names the delivery stage where it costs time today:
+
+| Stage | Shows up as |
+|---|---|
+| `plan` | Review questioning the approach, a PR rewritten or closed after its direction changed, open questions left in a design doc |
+| `build` | Large pull requests, agent-assisted PRs reworked because the agent assumed wrong, conventions missed while writing |
+| `review` | Waits for review, one reviewer carrying the load, the same request on PR after PR |
+| `test` | CI failing for causes a local check would catch, flaky checks, slow feedback |
+| `release` | Reverts and hotfixes |
+| `learn` | Bug issues, incidents, no way to tell whether a change did what it was for |
+
 For each finding, pick the cheapest fix that would have stopped it, in this order of preference, because a deterministic check costs nothing per pull request and a written rule relies on someone reading it:
 
 | Fix | When |
@@ -40,6 +51,7 @@ Report at most 5 findings, the ones that recur most, in under 1,000 words; drop 
 ```
 ### <imperative title, under 70 characters>
 Signal: repeated review feedback | CI friction | rework | escaped defect
+Stage: plan | build | review | test | release | learn
 Fix: lint rule | CI change | test | agent instructions | PR template | docs | process
 Effort: small (half a day or less) | medium (one to three days) | large (a week or more)
 Target: <file path in the repo, or the workflow and job>

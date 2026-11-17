@@ -103,6 +103,19 @@ class ViewTest(unittest.TestCase):
         f["impactLine"] = describe(f["impact"], 7)
         return to_view({"reviewedCount": 2, "findings": [f], "observations": [{"text": "Once", "prs": [1]}]}, DATA)
 
+    def test_groups_by_stage_with_the_limiting_step_first(self):
+        ci = finding(refs={"ciRuns": [900]})
+        wait = finding(title="Assign reviewers", signal="review wait", refs={"prs": [1]})
+        plan = finding(title="Design first", stage="plan", refs={"comments": [11]})
+        view = to_view({"findings": [ci, wait, plan], "constraintStage": "review",
+                        "stages": {"learn": "Outcomes are not in GitHub"}}, DATA)
+        self.assertEqual([s["title"] for s in view["sections"]],
+                         ["Review (limiting step)", "Plan", "Test and CI"])
+        # Ids follow rank order across stages, not position within a section.
+        self.assertEqual(view["sections"][0]["items"][0]["id"], "finding-2")
+        self.assertIn("- **Learn:** Outcomes are not in GitHub", view["summary"])
+        self.assertIn("ai-native-sdlc", view["summary"])
+
     def test_new_finding_offers_draft_issue_with_the_edited_body(self):
         view = self.view(refs={"ciRuns": [900]})
         item = view["sections"][0]["items"][0]
