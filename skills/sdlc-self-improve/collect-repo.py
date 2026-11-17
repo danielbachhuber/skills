@@ -332,7 +332,8 @@ def clip(text, limit=1200):
 def pr_digest(pr):
     lines = [f"# PR #{pr['number']}: {pr['title']}", "",
              f"{pr['url']}", f"Author: {pr['author']} · State: {pr['state']} · "
-             f"+{pr['size']['additions']}/-{pr['size']['deletions']} in {pr['size']['files']} files",
+             f"+{pr['size']['additions']}/-{pr['size']['deletions']} in {pr['size']['files']} files · "
+             f"Agent-assisted: {'yes' if pr.get('agentAssisted') else 'not marked'}",
              f"Ready: {pr['readyAt']} · First review after: {pr['hoursToFirstReview']}h · "
              f"First human review after: {pr['hoursToFirstHumanReview']}h · Ready to merge: {pr['hoursReadyToMerge']}h",
              f"Rounds answered with commits: {pr['rounds']} · Force pushes: {pr['forcePushes']} · "

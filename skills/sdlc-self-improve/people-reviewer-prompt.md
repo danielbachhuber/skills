@@ -29,6 +29,13 @@ Each finding also names the delivery stage where it costs time today:
 | `release` | Reverts and hotfixes |
 | `learn` | Bug issues, incidents, no way to tell whether a change did what it was for |
 
+**Could the authoring agent have caught it?** Most pull requests are now written with an agent; a digest says `Agent-assisted: yes` when the PR or its commits name one. For each finding, decide whether the author or agent writing the PR could have caught it before a person saw it, and why it did not:
+
+- `missing knowledge`: the convention or fact is not written anywhere the agent reads. Writing it down, or a check, fixes it.
+- `skipped`: the repo's `CLAUDE.md`, `AGENTS.md`, docs, or a skill already says it, and the PR did not do it. Check with `grep -rn` in the checkout and quote the line in `Basis:`. Another written rule will be skipped too, so the fix is something that runs whether or not the agent remembers: a hook, a CI step, a lint rule, or an `agent self-review` step.
+- `judgment`: no tool catches it, but a careful second read of the diff would, such as a test that passes without the change, a second copy of a rule left unchanged, or a backend that answers differently. The fix is `agent self-review`.
+- `no`: it needed something only a person knew, such as a product decision or what a reviewer prefers.
+
 For each finding, pick the cheapest fix that would have stopped the request, in this order of preference, because a deterministic check costs nothing per pull request and a written rule relies on someone reading it:
 
 | Fix | When |
@@ -36,6 +43,7 @@ For each finding, pick the cheapest fix that would have stopped the request, in 
 | `lint rule` | A pattern a linter, formatter, or type check can detect |
 | `CI change` | A check that should run earlier, faster, locally, or not at all |
 | `test` | A behavior that review protected and no test does |
+| `agent self-review` | A step before the PR opens in which the authoring agent, or a fresh subagent, reads its own diff against a short list of the requests reviewers make most in this repo; for what a careful reread catches and no tool can |
 | `agent instructions` | A convention agents keep missing: `AGENTS.md`, `CLAUDE.md`, or a repo skill |
 | `PR template` | Something reviewers keep asking authors to state |
 | `docs` | A convention people keep missing that no tool can check |
@@ -51,8 +59,9 @@ Report at most 5 findings, the ones that recur most, in under 1,000 words; drop 
 ### <imperative title, under 70 characters>
 Signal: repeated review feedback | review load
 Stage: plan | build | review | test | release | learn
-Fix: lint rule | CI change | test | agent instructions | PR template | docs | process
+Fix: lint rule | CI change | test | agent self-review | agent instructions | PR template | docs | process
 Effort: small (half a day or less) | medium (one to three days) | large (a week or more)
+Agent could catch: missing knowledge | skipped | judgment | no
 Target: <file path in the repo, or the workflow and job>
 Comments: <every comment or review id that shows it, comma-separated, or none>
 CI runs: none

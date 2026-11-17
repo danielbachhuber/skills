@@ -116,6 +116,15 @@ class ViewTest(unittest.TestCase):
         self.assertIn("- **Learn:** Outcomes are not in GitHub", view["summary"])
         self.assertIn("ai-native-sdlc", view["summary"])
 
+    def test_sums_hours_the_authoring_agent_could_catch(self):
+        caught = {**finding(agentCatch="skipped"), "impact": {"hoursPerWeek": 6}}
+        person = {**finding(title="Assign reviewers", agentCatch="no"), "impact": {"hoursPerWeek": 4}}
+        view = to_view({"findings": [caught, person]}, DATA)
+        self.assertIn("about 6 of 10 estimated hours a week, from 1 of 2 suggestions", view["summary"])
+        self.assertIn("1 of them break a rule the repo already writes down", view["summary"])
+        labels = [b["label"] for b in view["sections"][0]["items"][0]["badges"]]
+        self.assertIn("agent skipped a rule", labels)
+
     def test_new_finding_offers_draft_issue_with_the_edited_body(self):
         view = self.view(refs={"ciRuns": [900]})
         item = view["sections"][0]["items"][0]

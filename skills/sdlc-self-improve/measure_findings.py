@@ -30,7 +30,7 @@ MINUTES = {
 # Hours to make each size of fix, for the payback estimate.
 EFFORT_HOURS = {"small": 4, "medium": 16, "large": 40}
 DEFAULT_EFFORT = {
-    "docs": "small", "agent instructions": "small", "PR template": "small",
+    "docs": "small", "agent instructions": "small", "agent self-review": "small", "PR template": "small",
     "lint rule": "medium", "CI change": "medium", "test": "medium", "process": "medium",
 }
 

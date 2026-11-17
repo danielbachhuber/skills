@@ -36,6 +36,13 @@ Each finding also names the delivery stage where it costs time today:
 | `release` | Reverts and hotfixes |
 | `learn` | Bug issues, incidents, no way to tell whether a change did what it was for |
 
+**Could the authoring agent have caught it?** Most pull requests are now written with an agent; a digest says `Agent-assisted: yes` when the PR or its commits name one. For each finding, decide whether the author or agent writing the PR could have caught it before a person saw it, and why it did not:
+
+- `missing knowledge`: the convention or fact is not written anywhere the agent reads. Writing it down, or a check, fixes it.
+- `skipped`: the repo's `CLAUDE.md`, `AGENTS.md`, docs, or a skill already says it, and the PR did not do it. Check with `grep -rn` in the checkout and quote the line in `Basis:`. Another written rule will be skipped too, so the fix is something that runs whether or not the agent remembers: a hook, a CI step, a lint rule, or an `agent self-review` step.
+- `judgment`: no tool catches it, but a careful second read of the diff would, such as a test that passes without the change, a second copy of a rule left unchanged, or a backend that answers differently. The fix is `agent self-review`.
+- `no`: it needed something only a person knew, such as a product decision or what a reviewer prefers.
+
 Before reporting a finding, check in one shell command that it is not already tracked: `gh issue list --repo {{REPO}} --state open --search "<two or three keywords>"`. If an open issue covers it, report it anyway and name the issue on the `Tracked:` line.
 
 Report at most 4 findings in under 900 words; drop a finding rather than shorten the issue bodies. Write the report to `{{REPORT}}` with a shell heredoc, then reply with only that path; if you cannot write files, reply with the report itself. Use the same shape the batch reviewers use:
@@ -44,8 +51,9 @@ Report at most 4 findings in under 900 words; drop a finding rather than shorten
 ### <imperative title, under 70 characters>
 Signal: review wait | CI friction | escaped defect | batch size | rework
 Stage: plan | build | review | test | release | learn
-Fix: lint rule | CI change | test | agent instructions | PR template | docs | process
+Fix: lint rule | CI change | test | agent self-review | agent instructions | PR template | docs | process
 Effort: small (half a day or less) | medium (one to three days) | large (a week or more)
+Agent could catch: missing knowledge | skipped | judgment | no
 Target: <file path in the repo, or the workflow and job>
 Comments: none
 CI runs: <every failed run id that shows it, comma-separated, or none>

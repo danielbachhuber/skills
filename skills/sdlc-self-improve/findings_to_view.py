@@ -31,6 +31,10 @@ def stage_of(finding):
     return stage if stage in STAGES else DEFAULT_STAGE.get(finding.get("signal"), "review")
 
 
+CATCH_LABELS = {"missing knowledge": "agent lacked context", "skipped": "agent skipped a rule",
+                "judgment": "self-review would catch"}
+
+
 TONES = {
     "escaped defect": "danger",
     "CI friction": "warning",
@@ -59,7 +63,7 @@ def card(position, finding, repo):
     summary = [f"**Impact:** {finding.get('impactLine', 'not measured')}"]
     if hours:
         payback = impact.get("paybackWeeks")
-        summary.append(f"**Estimated cost:** about {hours:g} hours a week ({impact['hoursBasis']}). "
+        summary.append(f"**Estimated cost:** about {hours:g} hours a week ({impact.get('hoursBasis', 'basis not recorded')}). "
                        f"A {finding.get('effort', 'medium')} fix"
                        + (payback_text(payback) if payback else "."))
     summary += [
@@ -80,6 +84,8 @@ def card(position, finding, repo):
         "badges": [
             {"label": f"~{hours:g}h/week" if hours else "not measured", "tone": "neutral"},
             {"label": f"{finding.get('effort', 'medium')} effort", "tone": "neutral"},
+            *([{"label": CATCH_LABELS[finding["agentCatch"]], "tone": "warning"}]
+              if finding.get("agentCatch") in CATCH_LABELS else []),
             {"label": finding["signal"], "tone": TONES.get(finding["signal"], "neutral")},
             {"label": finding["fix"], "tone": "neutral"},
             {"label": f"{prs} PR{'' if prs == 1 else 's'}", "tone": "neutral"},
@@ -134,6 +140,19 @@ def redraft_action(item, finding, repo, label, primary=False):
     }
 
 
+def catchable_line(findings):
+    """How much of the estimated cost the authoring agent could have caught."""
+    total = sum((f.get("impact") or {}).get("hoursPerWeek", 0) for f in findings)
+    caught = [f for f in findings if f.get("agentCatch") in CATCH_LABELS]
+    hours = sum((f.get("impact") or {}).get("hoursPerWeek", 0) for f in caught)
+    if not total or not caught:
+        return ""
+    skipped = sum(1 for f in caught if f["agentCatch"] == "skipped")
+    return (f"\n\n**Catchable while authoring:** about {hours:.0f} of {total:.0f} estimated hours a week, "
+            f"from {len(caught)} of {len(findings)} suggestions, came from problems the author or agent could have "
+            f"caught before review" + (f"; {skipped} of them break a rule the repo already writes down." if skipped else "."))
+
+
 def headline(findings, data):
     prs = data["prs"]
     merged = sum(1 for pr in prs if pr["mergedAt"])
@@ -160,7 +179,8 @@ def to_view(findings, data, date=""):
              "summary": ", ".join(f"#{n}" for n in o.get("prs", []))}
             for i, o in enumerate(observations)]})
     flow = findings.get("constraint")
-    summary = headline(findings, data) + (f"\n\n**Limiting step:** {flow}" if flow else "")
+    summary = (headline(findings, data) + (f"\n\n**Limiting step:** {flow}" if flow else "")
+               + catchable_line(findings["findings"]))
     notes = findings.get("stages") or {}
     lines = [f"- **{STAGE_TITLES[st]}:** {notes[st]}" for st in STAGES if notes.get(st) and st != limiting]
     if lines:
