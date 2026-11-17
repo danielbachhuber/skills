@@ -15,6 +15,26 @@ import sys
 from datetime import datetime
 
 
+# What each measured event costs people, in minutes. These are rough working
+# figures, kept in one place so a team can set its own. The estimate is the time
+# a finding cost last week, which a fix saves each week the pattern would recur.
+MINUTES = {
+    "comment": 20,        # a reviewer writes it, the author reads and answers it
+    "rework": 60,         # another push, re-review, and switching back into the PR
+    "ciFailure": 15,      # noticing the failure, reading the log, pushing a fix
+    "waitWeek": 60,       # per PR per week waiting: rebasing, nudging, reloading context
+    "defect": 240,        # a revert or bug: finding, fixing, and shipping it again
+    "loadItem": 5,        # half the ~10 min a load reviewer spends per comment, the share a second owner could take
+}
+
+# Hours to make each size of fix, for the payback estimate.
+EFFORT_HOURS = {"small": 4, "medium": 16, "large": 40}
+DEFAULT_EFFORT = {
+    "docs": "small", "agent instructions": "small", "PR template": "small",
+    "lint rule": "medium", "CI change": "medium", "test": "medium", "process": "medium",
+}
+
+
 def parse_time(value):
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
@@ -113,7 +133,31 @@ def wait_impact(waiting, days):
         "waitingPrs": len(waiting),
         "wholeWindow": sum(1 for pr in waiting if (pr["hoursWaiting"] or 0) >= days * 24 - 1),
         "longestWaitHours": max((pr.get("hoursWaitingTotal", pr["hoursWaiting"]) or 0 for pr in waiting), default=0),
+        # Within the window only, so a PR open for a month counts one week.
+        "waitPrWeeks": round(sum(min(pr["hoursWaiting"] or 0, days * 24) for pr in waiting) / (7 * 24), 1),
     }
+
+
+def hours_lost(impact, days=7):
+    """Estimated hours of people's time this cost per week, and how it adds up."""
+    weekly = 7 / days
+    terms = [
+        ("comment", impact.get("comments", 0), "review comment", "review comments"),
+        ("rework", impact.get("reworkPrs", 0), "round of fixes after review", "rounds of fixes after review"),
+        ("ciFailure", impact.get("ciFailures", 0), "failed CI run", "failed CI runs"),
+        ("waitWeek", impact.get("waitPrWeeks", 0), "PR-week waiting", "PR-weeks waiting"),
+        ("defect", impact.get("reverts", 0) + impact.get("bugs", 0), "revert or bug", "reverts and bugs"),
+        ("loadItem", impact.get("reviewerItems", 0), "load-reviewer comment", "load-reviewer comments"),
+    ]
+    used = [(n, MINUTES[k], one if n == 1 else many) for k, n, one, many in terms if n]
+    hours = sum(n * m for n, m, _ in used) / 60 * weekly
+    basis = " + ".join(f"{n:g} {label} × {m} min" for n, m, label in used)
+    return round(hours, 1), basis
+
+
+def effort_of(finding):
+    effort = (finding.get("effort") or "").lower()
+    return effort if effort in EFFORT_HOURS else DEFAULT_EFFORT.get(finding.get("fix"), "medium")
 
 
 def duration(h):
@@ -158,20 +202,9 @@ def describe(impact, days):
 
 
 def rank_key(finding):
-    """One score: recurrence across PRs, plus what people and CI paid for it.
-
-    A PR touched or reworked counts 2, a review comment 1, a failed CI run 0.5
-    plus a point per 10 minutes it ran, a PR that waited the whole window 2, and
-    a revert or bug 5. Concentrated CI cost on one PR can then outrank a few
-    comments spread over several. A review-load finding's PRs are the reviewer's
-    reach, not a cost, so it ranks on its share: half the feedback scores 25.
-    """
+    """Highest impact first: estimated hours a week, then fewer weeks to pay back."""
     i = finding.get("impact") or {}
-    if finding.get("signal") == "review load":
-        return i.get("reviewerShare", 0) / 2
-    return (2 * i.get("prs", 0) + i.get("comments", 0) + 2 * i.get("reworkPrs", 0)
-            + 0.5 * i.get("ciFailures", 0) + i.get("ciMinutes", 0) / 10
-            + 2 * i.get("wholeWindow", 0) + 5 * (i.get("reverts", 0) + i.get("bugs", 0)))
+    return (i.get("hoursPerWeek", 0), -(i.get("paybackWeeks") or 0))
 
 
 def main(path):
@@ -183,13 +216,19 @@ def main(path):
     for finding in findings["findings"]:
         finding["impact"], warnings = measure(finding, comments, runs, prs, data["days"], data)
         finding["impactLine"] = describe(finding["impact"], data["days"])
+        impact = finding["impact"]
+        impact["hoursPerWeek"], impact["hoursBasis"] = hours_lost(impact, data["days"])
+        finding["effort"] = effort_of(finding)
+        impact["paybackWeeks"] = (round(EFFORT_HOURS[finding["effort"]] / impact["hoursPerWeek"], 1)
+                                  if impact["hoursPerWeek"] else None)
         for w in warnings:
             print(f"warning: {finding['title']}: {w}", file=sys.stderr)
     findings["findings"].sort(key=rank_key, reverse=True)
     with open(path, "w") as f:
         json.dump(findings, f, indent=1)
     for i, finding in enumerate(findings["findings"], 1):
-        print(f"{i}. {finding['title']}: {finding['impactLine']}")
+        i_ = finding["impact"]
+        print(f"{i}. ~{i_['hoursPerWeek']:g}h/week, {finding['effort']} effort: {finding['title']}: {finding['impactLine']}")
 
 
 if __name__ == "__main__":

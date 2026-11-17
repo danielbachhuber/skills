@@ -1,7 +1,7 @@
 import unittest
 
 from findings_to_view import to_view
-from measure_findings import describe, index, measure, rank_key
+from measure_findings import describe, hours_lost, index, measure, rank_key
 
 DATA = {
     "repo": "octo/widgets",
@@ -69,17 +69,30 @@ class MeasureTest(unittest.TestCase):
         self.assertEqual((impact["reviewerItems"], impact["reviewerShare"], impact["waitingPrs"]), (1, 50, 0))
         self.assertIn("one reviewer wrote 50% of the review feedback (1 comments and summaries)", describe(impact, 7))
 
+    def test_hours_add_up_from_per_event_minutes(self):
+        impact, _ = measure(finding(refs={"comments": [11, 21], "ciRuns": [900, 901]}), self.comments, self.runs, self.prs)
+        hours, basis = hours_lost(impact)
+        # 2 comments x 20 + 1 rework x 60 + 2 CI failures x 15 = 130 min
+        self.assertEqual(hours, 2.2)
+        self.assertEqual(basis, "2 review comments × 20 min + 1 round of fixes after review × 60 min + 2 failed CI runs × 15 min")
+
+    def test_wait_hours_count_only_the_window(self):
+        impact, _ = measure(finding(signal="review wait", refs={"prs": [1]}), self.comments, self.runs, self.prs)
+        # PR 1 has waited 35 days, but only this week's 168 hours count.
+        self.assertEqual(impact["waitPrWeeks"], 1.0)
+
     def test_warns_on_unknown_ids(self):
         _, warnings = measure(finding(refs={"comments": [99], "ciRuns": [5], "prs": [404]}),
                               self.comments, self.runs, self.prs)
         self.assertEqual(warnings, ["comment 99 not found", "CI run 5 not found", "PR #404 not found"])
 
-    def test_concentrated_ci_cost_outranks_a_few_spread_comments(self):
-        ci = {"impact": {"prs": 1, "ciFailures": 29, "ciMinutes": 72}}
-        spread = {"impact": {"prs": 4, "comments": 6, "reworkPrs": 2}}
-        one_off = {"impact": {"prs": 2, "comments": 2}}
-        self.assertGreater(rank_key(ci), rank_key(spread))
-        self.assertGreater(rank_key(spread), rank_key(one_off))
+    def test_ranks_by_hours_then_quicker_payback(self):
+        big = {"impact": {"hoursPerWeek": 10, "paybackWeeks": 4}}
+        quick = {"impact": {"hoursPerWeek": 3, "paybackWeeks": 1.3}}
+        slow = {"impact": {"hoursPerWeek": 3, "paybackWeeks": 13}}
+        unmeasured = {"impact": {"hoursPerWeek": 0, "paybackWeeks": None}}
+        self.assertEqual(sorted([slow, unmeasured, quick, big], key=rank_key, reverse=True),
+                         [big, quick, slow, unmeasured])
 
 
 class ViewTest(unittest.TestCase):

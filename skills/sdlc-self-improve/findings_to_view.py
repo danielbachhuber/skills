@@ -38,7 +38,14 @@ def card(position, finding, repo):
     evidence = finding.get("evidence") or []
     impact = finding.get("impact") or {}
     prs = impact.get("prs", 0)
-    summary = [f"**Impact:** {finding.get('impactLine', 'not measured')}",
+    hours = impact.get("hoursPerWeek")
+    summary = [f"**Impact:** {finding.get('impactLine', 'not measured')}"]
+    if hours:
+        payback = impact.get("paybackWeeks")
+        summary.append(f"**Estimated cost:** about {hours:g} hours a week ({impact['hoursBasis']}). "
+                       f"A {finding.get('effort', 'medium')} fix"
+                       + (payback_text(payback) if payback else "."))
+    summary += [
                f"**Issue:** {finding['issue']['title']}"]
     if finding.get("basis"):
         summary.append(f"**Why the fix works:** {finding['basis']}")
@@ -56,6 +63,8 @@ def card(position, finding, repo):
         "badges": [
             {"label": finding["signal"], "tone": TONES.get(finding["signal"], "neutral")},
             {"label": finding["fix"], "tone": "neutral"},
+            {"label": f"~{hours:g}h/week" if hours else "not measured", "tone": "neutral"},
+            {"label": f"{finding.get('effort', 'medium')} effort", "tone": "neutral"},
             {"label": f"{prs} PR{'' if prs == 1 else 's'}", "tone": "neutral"},
         ],
         "summary": "\n\n".join(summary),
@@ -84,6 +93,12 @@ def card(position, finding, repo):
     return item
 
 
+def payback_text(weeks):
+    if weeks < 1:
+        return " pays for itself within a week."
+    return f" pays for itself in about {weeks:.0f} week{'s' * (round(weeks) != 1)}."
+
+
 def revise_action(item, finding, repo):
     return {
         "type": "message", "label": "Revise", "repeat": True,
@@ -107,7 +122,7 @@ def headline(findings, data):
     merged = sum(1 for pr in prs if pr["mergedAt"])
     return (f"{len(findings['findings'])} suggestions from {findings.get('reviewedCount', '?')} of {len(prs)} "
             f"pull requests in `{data['repo']}` over {data['days']} days ({merged} merged, "
-            f"{len(data['ci']['failures'])} failed CI runs), ranked by how many PRs each touched. "
+            f"{len(data['ci']['failures'])} failed CI runs), ranked by the estimated hours a week each costs. "
             f"Edit an issue body before you draft it.")
 
 

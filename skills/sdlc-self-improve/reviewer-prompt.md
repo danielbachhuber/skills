@@ -41,6 +41,7 @@ Report at most 5 findings, the ones that recur most, in under 1,000 words; drop 
 ### <imperative title, under 70 characters>
 Signal: repeated review feedback | CI friction | rework | escaped defect
 Fix: lint rule | CI change | test | agent instructions | PR template | docs | process
+Effort: small (half a day or less) | medium (one to three days) | large (a week or more)
 Target: <file path in the repo, or the workflow and job>
 Comments: <every comment id that shows it, comma-separated, or none>
 CI runs: <every failed run id that shows it, comma-separated, or none>

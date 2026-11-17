@@ -31,6 +31,7 @@ Report at most 4 findings in under 900 words; drop a finding rather than shorten
 ### <imperative title, under 70 characters>
 Signal: review wait | CI friction | escaped defect
 Fix: lint rule | CI change | test | agent instructions | PR template | docs | process
+Effort: small (half a day or less) | medium (one to three days) | large (a week or more)
 Target: <file path in the repo, or the workflow and job>
 Comments: none
 CI runs: <every failed run id that shows it, comma-separated, or none>
