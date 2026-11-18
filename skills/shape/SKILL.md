@@ -22,6 +22,23 @@ confidence.
 If there is no agreed frame, use the `frame` skill first. Shaping without an appetite has
 nothing to cut against.
 
+## The package finishes the thread goal
+
+`frame` sets the thread goal's text and estimate, with placeholder "Done is" entries.
+Shaping replaces the placeholders with the real list:
+
+| Package | Thread goal |
+|---------|-------------|
+| Scope pieces (must-haves) | One "Done is" entry each, written as an end state |
+| Nice-to-haves (`~`) | Left off the list; added with `goal entry add` only if they get built |
+| Appetite | The estimate, unchanged |
+| No-gos | The `--reason` on the refine, so the goal's history records what was cut |
+
+So shape the scope into pieces that read as end states someone could check, such as
+"Archive warns when members are active", and keep the must-haves to what fits the
+tokenomics guide's limit (five entries at low detail). More pieces than that means the
+shape is too big for the appetite, or the pieces need grouping.
+
 ## 1. Restate the frame and list requirements
 
 Start from the frame's problem, outcome, and appetite. Turn the outcome into a short,
@@ -120,6 +137,10 @@ Post the package in chat:
 
 **Scope**
 1. <piece> 2. <piece> 3. ~<nice-to-have>
+
+**Thread goal after this**
+- Done is: Frame agreed ✓ → Shaped ✓ → <piece 1> → <piece 2> → <entry that ends the thread>
+- Estimate: <the frame's appetite, unchanged>
 ```
 
 Ask for approval above the composer with an Impromptu UI inline question: build it, pick a
@@ -129,11 +150,23 @@ different shape, change what's cut, or reframe.
 
 Once the user approves:
 
-- Refine the thread goal so its "Done is" list matches the scope pieces, and keep the
-  frame's appetite as the estimate.
+- Rewrite the goal's list from the package. Keep the goal text and leave the estimate
+  flags out, so the appetite stays as `frame` set it:
+
+  ```bash
+  bb tokenomics goal refine \
+    --stage "Frame agreed" --stage "Shaped" \
+    --stage "<piece 1 as an end state>" --stage "<piece 2 as an end state>" \
+    --stage "<entry that ends the thread>" \
+    --reached 2 --reason "Shaped as <shape title>. No-gos: <cut items>"
+  ```
+
+  If the chosen shape can't fit the appetite even after cutting, don't stretch the estimate
+  here. Go back to `frame` and ask the user for a bigger appetite or a smaller outcome.
 - Build with `work-on`, or `iterate-design` first if a piece needs a visual direction.
-- Check `bb tokenomics goal show` at the end of each round. When the thread reaches the
-  appetite with work left, stop. Show what is done, what is left, and what you would cut.
+- Mark entries as pieces finish (`goal entry done N`), and check `bb tokenomics goal show`
+  at the end of each round. When it reports the thread past its estimate with entries
+  left, stop. Show what is done, what is left, and what you would cut.
   Ask the user to ship what's done, cut more scope, or reframe with the `frame` skill. Don't
   extend the appetite by continuing to work.
 - When feedback during the build asks for something new, check it against the no-gos and

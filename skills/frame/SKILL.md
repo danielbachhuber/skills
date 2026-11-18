@@ -22,6 +22,22 @@ past its estimate. As Singer puts it in
 [The cost of not shaping](https://www.ryansinger.co/the-cost-of-not-shaping/), "that time
 isn't free."
 
+## The frame becomes the thread goal
+
+Framing exists to set the thread's goal (`bb tokenomics goal`). Each part of the frame fills
+one part of the goal:
+
+| Frame | Thread goal |
+|-------|-------------|
+| Outcome | The goal text, in one sentence |
+| Appetite | The estimate: `--turns`, `--tokens`, `--minutes` |
+| Kind of work | `--shape task` for something to build or fix; `--shape exploration` when the outcome is a decision |
+| What comes next | A first "Done is" list that `shape` replaces with the real scope |
+| "Not worth it now" | The goal closed as `not`, or cleared |
+
+Write the frame so these pieces come straight out of it. An outcome that won't fit in one
+sentence, or an appetite you can't give as numbers, means the frame isn't finished.
+
 ## 1. Capture the source
 
 Quote the request verbatim: the user's message, the issue body, and any comments or linked
@@ -103,7 +119,14 @@ Post the frame in chat in this form:
 **Less about / More about** (optional)
 
 **Not now:** <other problems from the request, one line each>
+
+**Thread goal this sets**
+- Goal: <the outcome in one sentence>
+- Estimate: <turns>, <tokens>, <minutes>
+- Done is: Frame agreed → Shaped → <end state> → <the entry that ends the thread>
 ```
+
+Showing the goal alongside the frame lets the user agree to both at once.
 
 Ask for agreement above the composer with an Impromptu UI inline question: agree and shape
 it, change the appetite, narrow further, or drop it. A frame can end in "not worth it now."
@@ -111,11 +134,31 @@ That is a good outcome, not a failure.
 
 ## 6. Record it
 
-Once the user agrees:
+Once the user agrees, record the goal. Most threads already have one from their first
+response, set before anyone framed the work, so replace it with `refine`:
 
-- Set or refine the thread goal with the outcome as the goal text and the appetite as the
-  estimate (`--turns`, `--tokens`, `--minutes`). The appetite is the circuit breaker the
-  `shape` skill and later work check against.
+```bash
+bb tokenomics goal refine "<outcome in one sentence>" \
+  --stage "Frame agreed" --stage "Shaped" \
+  --stage "<end state of the work>" --stage "<entry that ends the thread>" \
+  --turns 4-10 --tokens 5M-20M --minutes 30-90 \
+  --reached 1 --reason "Framed: <problem in a few words>, appetite <small|big> batch"
+```
+
+Use `goal set ... --by agent` instead when the thread has no goal yet. Follow the goal rules
+the tokenomics guide gives: entries are end states, not steps, and when the user will
+review what gets made, the last entry is their acceptance, such as "Refined on your
+feedback."
+
+The middle entries are placeholders. `shape` replaces them with the scope it settles on,
+and keeps the estimate. For a small-batch fix that skips shaping, write the real end states
+now and leave out "Shaped".
+
+If the frame ended in "not worth it now", close the goal with
+`bb tokenomics goal close not --note "<why>"` and stop.
+
+Then:
+
 - If the work is tied to a GitHub issue, offer to add the frame to the issue with the
   `draft-issue-description` skill.
 - Move on to the `shape` skill. For a small-batch fix whose solution is already obvious,
@@ -129,8 +172,13 @@ estimate". Stop taking new requests and reframe:
 1. List what the thread has done, and what is left, against the frame's outcome.
 2. Ask whether the remaining work serves the original outcome or a new one. New requests
    that crept in often belong to a different problem.
-3. Offer the user three choices: ship what is done and cut the rest, set a new appetite for
-   the remaining work, or split the new problem into its own thread.
+3. Offer the user three choices, each of which changes the goal:
+   - **Ship what is done and cut the rest:** `goal entry drop N` for the cut entries, then
+     finish and close the goal as `met` or `partly`.
+   - **Set a new appetite for the remaining work:** `goal estimate` with the new numbers, or
+     `goal refine` if the outcome changed too, with a `--reason` that says what grew.
+   - **Split the new problem into its own thread:** drop it from this goal, and give the new
+     thread a frame of its own.
 
 Extending the appetite is the user's decision, made out loud. Don't keep working past it by
 default.
