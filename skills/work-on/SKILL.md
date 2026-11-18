@@ -24,7 +24,7 @@ unless the user explicitly asks for a worktree:
 
 - Don't create a branch or worktree in step 1, and don't start new threads with
   `start-branch-thread` in step 7. Split work becomes a series of commits.
-- Skip the PR description in step 9 and reviewer suggestions in step 10. Instead,
+- Skip the PR description and reviewer suggestions in steps 9 and 10. Instead,
   commit and push at the end of each round, as CLAUDE.md describes.
 - Steps 2 to 6 still apply. If step 8 calls for a review, offer it after the push, and
   have the reviewer read the pushed commits.
@@ -250,26 +250,21 @@ When the user's instructions are to wait for their review before committing:
    `draft-pr-description` skill. The testing strategy, edge cases, and any rollout plan
    from steps 3 to 5 belong in it, and so do review findings from step 8 that changed
    the code.
-2. **Review offer.** If step 8 says to offer a review, ask as it describes.
-3. Stop. Don't commit, push, or open the PR until the user confirms.
+2. **Reviewer suggestion.** In the same turn as the PR description card, publish a
+   second card that suggests who should review the PR, as step 10 describes.
+3. **Review offer.** If step 8 says to offer a review, ask as it describes.
+4. Stop. Don't commit, push, or open the PR until the user confirms.
 
 When the user has told you to commit and push without review, still draft the PR
-description before opening the PR. Don't stop to offer the review.
+description and suggest reviewers before opening the PR. Don't stop to offer the review.
 
 ## 10. Suggest reviewers
 
-Once the PR is open, suggest who should review it. Skip this step when the PR is a draft,
-when it already has a reviewer, or when nobody but the user reviews PRs in the repo.
+Pick reviewers while drafting the PR description, so the user can choose them in the
+same pass instead of typing a name after the PR opens. Skip this step when the PR will be
+a draft, or when nobody but the user reviews PRs in the repo.
 
-1. **Check for reviewers already requested.** CODEOWNERS and branch rules often request
-   them when the PR opens. Count entries rather than reading `.login`, since a team entry
-   has `.slug` instead.
-
-   ```bash
-   gh pr view <n> --json isDraft,reviewRequests --jq '{isDraft, requested: (.reviewRequests | length)}'
-   ```
-
-2. **Check that the repo has other reviewers.** List who reviewed recently merged PRs,
+1. **Check that the repo has other reviewers.** List who reviewed recently merged PRs,
    leaving out the user and bots. An empty list means a solo repo: stop here.
 
    ```bash
@@ -281,25 +276,45 @@ when it already has a reviewer, or when nobody but the user reviews PRs in the r
 
    Drop the user's own login from the result (`gh api user --jq .login`).
 
-3. **Match people to the change.** Look at who knows the code this PR touches:
+2. **Match people to the change.** Look at who knows the code this PR touches:
    - `EXPERTS.md` at the repo root, if it exists: match the PR's scope and changed paths
-     to a row.
+     to a row. A row may name a team, such as `psi-server-experts`; suggest the team.
+   - `CODEOWNERS`, if it exists. Owners it names are requested automatically when the PR
+     opens, so note them on the card rather than suggesting them again.
    - Recent authors of the changed files, from `git log --format='%an <%ae>' -n 20 -- <paths>`.
    - People named in the issue or its comments as owning the area, or asked to weigh in.
 
-   Prefer someone who appears both here and in the list from step 2. A recent author who
+   Prefer someone who appears both here and in the list from step 1. A recent author who
    never reviews is a weaker pick than an active reviewer who knows the area.
 
-4. **Suggest one reviewer, with the reason.** Add a second only when the change spans two
+3. **Suggest one reviewer, with the reason.** Add a second only when the change spans two
    areas with different owners. Name the evidence for each pick, such as "wrote most of
-   `src/votes/` in the last month" or "the `votes` row in `EXPERTS.md`", so the user can
-   judge it. Ask before requesting the review, since it notifies the person. When
-   `bb impromptu-ui` is available, ask above the composer with the `impromptu-ui` skill,
-   one option per candidate. Once the user confirms:
+   `src/votes/` in the last month" or "the Server row in `EXPERTS.md`", so the user can
+   judge it.
+
+4. **Ask on its own card.** Requesting a review notifies the person, so ask first. When
+   `bb impromptu-ui help` succeeds, load the `impromptu-ui` skill and publish a card
+   under the key `work-on-reviewers`, separate from the PR description card. Its title
+   is "Request review from <pick>?", its `summary` is the evidence for each pick, and its
+   answers are one button per pick (the first one `primary`), a "Both" button when there
+   are two, and "No reviewer". Without the plugin, name the picks and the evidence in the
+   hand-back and ask in the same message as the PR description.
+
+5. **Request it once the PR is open.** The PR doesn't exist yet when the card goes up, so
+   keep the user's answer and request the review right after `gh pr create`. If the user
+   answered before then, say on the card that the request will go out when the PR opens.
+   Check first that the pick wasn't already requested by CODEOWNERS or a branch rule.
+   Count entries rather than reading `.login`, since a team entry has `.slug` instead.
 
    ```bash
-   gh pr edit <n> --add-reviewer <login>
+   gh pr view <n> --json reviewRequests --jq '[.reviewRequests[] | .login // .slug]'
+   gh pr edit <n> --add-reviewer <login>          # a person
+   gh pr edit <n> --add-reviewer <org>/<team>     # a team
    ```
+
+   Then publish the card again under the same key with the request marked done and the PR
+   linked. When the PR was opened without this step, or the user opens it themselves,
+   suggest reviewers then, in the same card.
 
 ## 11. Propose the next PR in a stack
 
@@ -338,7 +353,8 @@ start the thread. Skip this step when this PR is the last in the stack.
 | Starting a review the user didn't ask for | Offer it above the composer and run it only on a yes. |
 | Building every PR of a stack in one thread, moving between worktrees | Finish PR 1 here, then, once the user approves, start the next PR in a new top-level thread with `start-branch-thread`, without `--parent-self`, and a prompt that carries the scope, decisions, and draft paths. |
 | Reading Figma screenshots and variables in this thread | Send them to a subagent that returns only the values the change needs. |
-| Opening the PR and stopping there | Suggest a reviewer, unless the repo has nobody else reviewing, and propose the next PR in the stack, if there is one. |
+| Waiting until the PR is open to suggest a reviewer | Suggest one on its own card next to the PR description card, and request the review right after the PR opens. |
+| Opening the PR and stopping there | Request the reviewer the user picked, and propose the next PR in the stack, if there is one. |
 | Listing the next PR in the stack as "not started" | Propose it in a card once this PR is open (step 11). |
 | Starting the next PR's thread without asking | Propose it with its branch, scope, and plan, and start it once the user approves. |
 | Requesting a review without asking | Name the pick and the reason, and request it once the user confirms. |
