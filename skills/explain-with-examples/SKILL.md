@@ -1,9 +1,9 @@
 ---
-name: worked-example
+name: explain-with-examples
 description: Use when explaining something to the user, such as how a bug happens, why a review point matters, what a change does, or how part of a system works, and when the user asks for an example, a worked example, or to "show me" what an explanation means.
 ---
 
-# Worked example
+# Explain with examples
 
 An explanation that states only the general rule asks the reader to imagine a case where it
 applies. Give them the case. Show the actual thing, such as the row, the request, the file,
