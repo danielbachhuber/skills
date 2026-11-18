@@ -294,11 +294,15 @@ a draft, or when nobody but the user reviews PRs in the repo.
 
 4. **Ask on its own card.** Requesting a review notifies the person, so ask first. When
    `bb impromptu-ui help` succeeds, load the `impromptu-ui` skill and publish a card
-   under the key `work-on-reviewers`, separate from the PR description card. Its title
-   is "Request review from <pick>?", its `summary` is the evidence for each pick, and its
+   under the key `work-on-reviewers`, separate from the PR description card, with
+   `"layout": "inline"` so the user answers right above the composer. Its title is
+   "Request review from <pick>?", its `summary` is the evidence for each pick, and its
    answers are one button per pick (the first one `primary`), a "Both" button when there
-   are two, and "No reviewer". Without the plugin, name the picks and the evidence in the
-   hand-back and ask in the same message as the PR description.
+   are two, and "No reviewer". The inline layout's "Something else…" field lets the user
+   type their own answer, such as another login, a team, or "robennals, after #7160
+   merges". Treat that text as the pick, and ask again only if it names nobody you can
+   request. Without the plugin, name the picks and the evidence in the hand-back and ask
+   in the same message as the PR description.
 
 5. **Request it once the PR is open.** The PR doesn't exist yet when the card goes up, so
    keep the user's answer and request the review right after `gh pr create`. If the user
