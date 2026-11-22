@@ -33,9 +33,14 @@ isn't free."
 
 ## Where the work lives
 
-Write the shaping document to `$BB_THREAD_STORAGE/shape.md` and keep it current as you go.
-Post each section in chat when you reach a checkpoint, but the file is the version of
-record: later steps read from it, and revisions edit it rather than reposting from
+Each shaping session gets a folder in `~/projects/drafts/`, named `shape-<slug>/` after
+the problem, such as `~/projects/drafts/shape-archive-warning/`. The shaping document is
+`shape.md` in that folder, and everything it refers to goes there too: breadboard drawings,
+screenshots of CURRENT, spike notes, and prototypes. Link files from `shape.md` by relative
+path, and link the folder and document in chat by absolute path so they open in bb.
+
+Keep `shape.md` current as you go. Post each section in chat when you reach a checkpoint,
+but the file is the version of record: later steps read from it, and revisions edit it rather than reposting from
 memory. When you revise a table, post the whole table again and mark the rows that
 changed with 🟡.
 
@@ -282,7 +287,7 @@ Then:
 
 - If the work is tied to a GitHub issue, offer to add the problem and package to it with
   the `draft-issue-description` skill.
-- Build with `work-on`, passing it `shape.md`. Use `iterate-design` first if a piece needs a
+- Build with `work-on`, passing it the path to `shape.md`. Use `iterate-design` first if a piece needs a
   visual direction.
 
 ## During the build: the circuit breaker
