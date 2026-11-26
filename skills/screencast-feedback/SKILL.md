@@ -21,14 +21,17 @@ pairing the two and keeping only what they meant.
 python3 ~/.claude/skills/screencast-feedback/extract.py "<video>"
 ```
 
-Run it in the background. Transcription uses the local Whisper `turbo` model and takes
-about as long as the recording, or a little longer. Nothing leaves the machine. Pass
-`--language en` when you know the language, `--out <dir>` to choose where output goes
+Run it in the background. It checks for an embedded text subtitle track first and uses
+its timestamps when it can extract text. Otherwise it transcribes audio with the local
+Whisper `turbo` model, which takes about as long as the recording or a little longer.
+Nothing leaves the machine. Pass `--language en` when you know the language, `--out <dir>` to choose where output goes
 (default `/tmp/screencast-feedback/<video name>/`), and `--no-transcript` for a silent
 recording.
 
-It needs `ffmpeg` and the `whisper` CLI (`brew install ffmpeg openai-whisper`). If
-either is missing, say which and stop.
+It needs `ffmpeg` and `ffprobe`. When no usable text subtitle track exists and the
+recording has audio, it also needs the `whisper` CLI (`brew install ffmpeg
+openai-whisper`). If a required tool is missing, say which and stop. Captions burned
+into the video are not a separate text track and cannot be extracted by this check.
 
 The script writes:
 
@@ -36,7 +39,8 @@ The script writes:
   next screenshot. Read this first.
 - `frames/`: JPEG screenshots, named by position and time (`014-01m21s.jpg`).
 - `transcript.txt`: the transcript alone, one timestamped phrase per line.
-- `manifest.json` and `transcript.json`: the same data as JSON.
+- `manifest.json` and `transcript.json`: the same data as JSON. The timeline and
+  manifest identify whether the transcript came from captions or Whisper.
 
 Screenshots are taken once the screen settles after a change and partway into each
 spoken phrase, then dropped when nothing visible changed. A three-minute recording
@@ -50,7 +54,7 @@ went, which is often what a later remark or retraction refers to.
 
 While reading, keep in mind:
 
-- **The transcript is approximate.** Whisper mishears product names and labels. Use
+- **The transcript is approximate.** Captions and Whisper can mishear product names and labels. Use
   the screenshot to fix them: "lot a" on a screen showing "Parking Lot A" is
   "Parking Lot A". Quote the corrected words, and keep the original only when the
   correction is a guess.

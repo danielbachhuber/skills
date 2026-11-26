@@ -8,7 +8,7 @@ Writes to DIR (default /tmp/screencast-feedback/<video-stem>/):
 
     timeline.md      screenshots and transcript interleaved in time order; read this first
     transcript.txt   the transcript alone, one timestamped line per segment
-    transcript.json  Whisper's raw output
+    transcript.json  caption segments or Whisper's raw output
     frames/          JPEG screenshots, long edge at most 1568px
     manifest.json    video metadata plus every frame with its time and reason
 
@@ -17,6 +17,7 @@ spoken phrase, then dropped when they look the same as the screenshot before the
 """
 
 import argparse
+import html
 import json
 import re
 import shutil
@@ -42,7 +43,7 @@ def fmt(t):
 
 def probe(video):
     out = run(["ffprobe", "-v", "error", "-show_entries",
-               "format=duration:stream=codec_type,width,height", "-of", "json", str(video)])
+               "format=duration:stream=index,codec_type,width,height:stream_tags=language", "-of", "json", str(video)])
     info = json.loads(out.stdout)
     streams = info.get("streams", [])
     v = next((s for s in streams if s.get("codec_type") == "video"), None)
@@ -53,13 +54,41 @@ def probe(video):
         "width": v["width"],
         "height": v["height"],
         "has_audio": any(s.get("codec_type") == "audio" for s in streams),
+        "subtitles": [s for s in streams if s.get("codec_type") == "subtitle"],
     }
+
+
+def captions(video, streams, language):
+    """Extract the first usable text subtitle track, preferring the requested language."""
+    if language:
+        streams = sorted(streams, key=lambda s: not s.get("tags", {}).get("language", "").startswith(language))
+    for stream in streams:
+        try:
+            result = run(["ffmpeg", "-v", "error", "-i", str(video), "-map", f"0:{stream['index']}",
+                          "-f", "srt", "-"]).stdout.decode("utf-8-sig")
+        except (subprocess.CalledProcessError, UnicodeDecodeError):
+            continue
+        segments = []
+        for block in re.split(r"\n\s*\n", result.replace("\r\n", "\n")):
+            match = re.search(r"(\d+):(\d+):(\d+)[,.](\d+)\s+-->\s+(\d+):(\d+):(\d+)[,.](\d+)[^\n]*\n(.*)", block, re.S)
+            if not match:
+                continue
+            def seconds(parts):
+                h, m, s, fraction = parts
+                return int(h) * 3600 + int(m) * 60 + int(s) + int(fraction) / (10 ** len(fraction))
+            text = html.unescape(re.sub(r"<[^>]+>|\{[^}]+\}", "", match.group(9))).strip()
+            if text:
+                segments.append({"start": seconds(match.group(1, 2, 3, 4)),
+                                 "end": seconds(match.group(5, 6, 7, 8)), "text": " ".join(text.split())})
+        if segments:
+            print(f"Using subtitle stream {stream['index']}.", file=sys.stderr)
+            return segments, f"subtitle stream {stream['index']}"
+    return [], None
 
 
 def transcribe(video, out_dir, model, language):
     if not shutil.which("whisper"):
-        print("whisper CLI not found; skipping transcript (brew install openai-whisper)", file=sys.stderr)
-        return []
+        sys.exit("whisper CLI not found (brew install openai-whisper)")
     with tempfile.TemporaryDirectory() as tmp:
         wav = Path(tmp) / "audio.wav"
         run(["ffmpeg", "-v", "error", "-i", str(video), "-vn", "-ac", "1", "-ar", "16000", str(wav)])
@@ -190,20 +219,20 @@ def extract_frames(video, frames_dir, picks, samples, threshold, max_frames):
     return frames
 
 
-def write_timeline(out_dir, video, meta, frames, segments, model):
+def write_timeline(out_dir, video, meta, frames, segments, source):
     lines = [
         f"# Screencast: {video.name}",
         "",
         f"Source: `{video}`  ",
         f"Duration {fmt(meta['duration'])}, {meta['width']}x{meta['height']}, "
         f"{len(frames)} screenshots, {len(segments)} transcript segments"
-        + (f" (whisper {model})" if segments else ""),
+        + (f" ({source})" if segments else ""),
         "",
         "Each section starts with a screenshot and lists what was said until the next one. "
         "Times are mm:ss.s from the start of the video.",
         "",
     ]
-    if not meta["has_audio"]:
+    if not meta["has_audio"] and not segments:
         lines += ["**This recording has no audio track.**", ""]
     elif not segments:
         lines += ["**No speech was transcribed.**", ""]
@@ -241,24 +270,34 @@ def main():
     stem = re.sub(r"[^A-Za-z0-9._-]+", "-", video.stem).strip("-")
     out_dir = (args.out or Path("/tmp/screencast-feedback") / stem).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
+    for name in ("transcript.json", "transcript.txt"):
+        (out_dir / name).unlink(missing_ok=True)
 
     meta = probe(video)
     segments = []
-    if meta["has_audio"] and not args.no_transcript:
-        segments = transcribe(video, out_dir, args.model, args.language)
+    source = None
+    if not args.no_transcript:
+        segments, source = captions(video, meta["subtitles"], args.language)
+        if segments:
+            (out_dir / "transcript.json").write_text(json.dumps({"source": source, "segments": segments}, indent=2))
+            (out_dir / "transcript.txt").write_text("".join(f"[{fmt(s['start'])}] {s['text']}\n" for s in segments))
+        elif meta["has_audio"]:
+            segments = transcribe(video, out_dir, args.model, args.language)
+            source = f"whisper {args.model}" if segments else None
     print("Finding screen changes...", file=sys.stderr)
     samples = sample_screen(video, meta["width"], meta["height"])
     settles = settled_changes(samples, args.change)
     picks = candidates(meta["duration"], settles, segments, args.min_gap)
     print(f"Extracting up to {len(picks)} screenshots...", file=sys.stderr)
     frames = extract_frames(video, out_dir / "frames", picks, samples, args.change, args.max_frames)
-    write_timeline(out_dir, video, meta, frames, segments, args.model)
+    write_timeline(out_dir, video, meta, frames, segments, source)
     (out_dir / "manifest.json").write_text(json.dumps({
         "video": str(video),
         **meta,
         "screen_changes": len(settles),
         "frames": [{"time": round(f["time"], 2), "reason": f["reason"], "path": str(f["path"])} for f in frames],
         "segments": len(segments),
+        "transcript_source": source,
     }, indent=2))
     print(out_dir / "timeline.md")
 
