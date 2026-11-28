@@ -15,7 +15,7 @@ Decide what you were handed before running any sweep. The mode sets how much you
 **Point-edit mode**
 - [ ] Change only the line, word, or section named, plus the minimum around it needed for the edit to read cleanly (a pronoun, a transition)
 - [ ] Check the edit against the AI Tells list and the surrounding voice, so the new line doesn't stand out
-- [ ] Return only the changed text with a one-line reason per change, and offer one alternative if the choice is close
+- [ ] Show each change as its own diff with a one-line reason (see "Show Each Change as a Diff" in SKILL.md), and offer one alternative if the choice is close
 - [ ] Mention a serious problem elsewhere in one line at the end (a false claim, a broken CTA) without fixing it unasked
 - [ ] Don't rewrite neighboring lines, add sections, or run a full sweep report
 

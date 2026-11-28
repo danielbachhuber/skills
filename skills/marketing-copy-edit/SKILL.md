@@ -22,7 +22,7 @@ Good copy editing improves what's already there. Each pass focuses on one dimens
 - Each edit should have a clear reason
 - Preserve the author's voice while improving clarity
 
-**Pick the mode before editing.** Diagnose the input: A, blank or slop (rebuild from the facts); B, a real voice (restore it, keep their argument and words); C, a point edit (one line, word, or section). **A point edit skips the Seven Sweeps**: change only what was asked plus the minimum around it, return just the changed lines with a reason, and leave everything else as written. Run the full sweeps for A and B. See [references/checklist.md](references/checklist.md#pick-the-edit-mode).
+**Pick the mode before editing.** Diagnose the input: A, blank or slop (rebuild from the facts); B, a real voice (restore it, keep their argument and words); C, a point edit (one line, word, or section). **A point edit skips the Seven Sweeps**: change only what was asked plus the minimum around it, show each change as a diff with a reason (see [Show Each Change as a Diff](#show-each-change-as-a-diff)), and leave everything else as written. Run the full sweeps for A and B. See [references/checklist.md](references/checklist.md#pick-the-edit-mode).
 
 ---
 
@@ -437,12 +437,42 @@ For a final QA pass before delivering edits, work through the full checklist in 
 When editing collaboratively:
 
 1. **Run a sweep and present findings** - Show what you found, why it's an issue
-2. **Recommend specific edits** - Don't just identify problems; propose solutions
+2. **Recommend specific edits** - Don't just identify problems; propose each one as a diff (below)
 3. **Request the updated copy** - Let the author make final decisions
 4. **Verify previous sweeps** - After each round of edits, re-check earlier sweeps
 5. **Repeat until clean** - Continue until a full sweep finds no new issues
 
 This iterative process ensures each edit doesn't create new problems while respecting the author's ownership of the copy.
+
+---
+
+## Show Each Change as a Diff
+
+Every edit you propose, in every mode, is shown as its own before-and-after diff, so the author sees exactly what changes and can take or leave each one. Never hand back a rewritten block of copy with the changes folded in and unmarked.
+
+**One change per diff.** Each diff holds one problem: a cut intensifier, a rewritten headline, a proof gap filled with a `[NEED: ...]` blank. Two diffs never touch the same words, so the author can accept any of them and skip the rest.
+
+**Keep the before short.** The before is the shortest exact span that contains the problem, copied character for character from the copy. A one-word fix quotes the sentence, not the paragraph. The after is the before with only that fix applied.
+
+**Say where and why.** Label each diff with where it sits (such as "Hero › Subhead" or "Pricing › Pro tier CTA") and give the sweep that found it and a one-line reason, such as "So What: the feature has no benefit attached."
+
+**With Impromptu UI** (`bb impromptu-ui` is available), publish one card per change, following the impromptu-ui skill's "Propose corrections to a document" pattern, and check `bb impromptu-ui schema` for fields:
+
+- `title`: where it is and what's wrong, such as "Hero headline: contrast reveal".
+- `summary`: the sweep and the one-line reason.
+- `changes`: `{ "label": "<file or 'Pasted copy'> › <section>", "before": ..., "after": ... }`.
+- For a change you want the author to word, such as a testimonial or a number only they know, make it a `draft` card: a `before` with no `after`, and the item's `draft` holding your suggestion with bracketed blanks.
+- Group cards into sections by sweep, in sweep order, and in reading order within each.
+- Buttons: Apply (`primary`; include `{draft}` in its text on a draft card), Skip, Revise (`"repeat": true`, with `{note}`).
+
+**Without Impromptu UI**, write each change in chat as a numbered heading with the location and reason, followed by a fenced `diff` block:
+
+```diff
+- Our powerful solution helps businesses of all sizes optimize their workflows.
++ CloudSync cuts weekly reporting from 4 hours to 30 minutes for teams of 5 to 50.
+```
+
+**Applying changes.** When the copy lives in a file, change it only after the author accepts a diff, and replace the before text with the after text and nothing else. When the copy was pasted into chat, apply the accepted changes and give back the full copy once, after the author has decided on every diff.
 
 ---
 
